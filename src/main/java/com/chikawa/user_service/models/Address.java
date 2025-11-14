@@ -32,6 +32,7 @@ public class Address {
     @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
+    //người nhận hàng
     @Column(name = "recipient_name", nullable = false)
     private String recipientName;
 

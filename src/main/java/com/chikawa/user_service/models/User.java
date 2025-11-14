@@ -27,12 +27,19 @@ public class User {
     @Column(name = "full_name", nullable = false)
     private String fullName = "";
 
+    //dành cho token , tọa token phải có jti  lúc logout thì huủy những token đang tồn tại
+    //lúc taojnusser gán 1 jti bấtkyfyf, chuỗi random 64bit tạo token gán jti vào token
+    //khi check valid thì check jti trong jwwt có = trong db k
+    // khi log out đổi jti thành 1 cái khác
+    //monolithic
     @Column(nullable = false, unique = true)
     private String jti = "";
 
     @Column(name = "encrypted_password", nullable = false)
     private String encryptedPassword = "";
 
+    //lúc người dùng đăng ký, taạo ra 1 cái này, khi gửi mial về kèm token trong đường dẫn,
+    //người dùng click vào button và server xem có trùng với trong db không trường ở dưới set time
     @Column(name = "confirmation_token")
     private String confirmationToken;
 
@@ -42,6 +49,7 @@ public class User {
     @Column(name = "confirmation_sent_at")
     private LocalDateTime confirmationSentAt;
 
+    //thừa
     @Column(name = "unconfirmed_email")
     private String unconfirmedEmail;
 
@@ -54,6 +62,7 @@ public class User {
     @Column(nullable = false)
     private String role = "customer";
 
+    //id trong line
     @Column(name = "line_user_id", unique = true)
     private String lineUserId;
 
@@ -66,12 +75,14 @@ public class User {
     @Column(name = "last_sign_in_at")
     private LocalDateTime lastSignInAt;
 
+    //check ip
     @Column(name = "current_sign_in_ip")
     private String currentSignInIp;
 
     @Column(name = "last_sign_in_ip")
     private String lastSignInIp;
 
+    //k dùng
     @Column(name = "unlock_token", unique = true)
     private String unlockToken;
 
