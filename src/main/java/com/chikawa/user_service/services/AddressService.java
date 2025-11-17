@@ -11,9 +11,9 @@ import java.util.List;
 
 @Service
 public interface AddressService {
-    ResponseEntity<ApiResponse<List<Address>>> getAllAddress();
+    ResponseEntity<ApiResponse<List<Address>>> getAllAddressByUserId(Long userId);
 
-    ResponseEntity<ApiResponse<Address>> createAddress(AddressCreateRequest request,Long userId);
+    ResponseEntity<ApiResponse<Address>> addAddress(AddressCreateRequest request, Long userId);
 
     ResponseEntity<ApiResponse<Address>> updateAddress(AddressUpdateRequest request, Long addressId, Long userId);
 

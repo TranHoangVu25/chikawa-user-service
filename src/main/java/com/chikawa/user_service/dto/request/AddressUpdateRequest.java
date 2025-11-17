@@ -17,7 +17,7 @@ public class AddressUpdateRequest {
     private String phoneNumber;
     private String recipientName;
     private LocalDateTime updatedAt;
-    private Boolean isDefaultAddress = false;
+    private Boolean isDefaultAddress;
     private String country;
     private String province;
 }

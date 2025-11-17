@@ -1,5 +1,6 @@
 package com.chikawa.user_service.models;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -94,6 +95,7 @@ public class User {
 
     // Relationship
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+//    @JsonManagedReference
     private List<Address> addresses;
 }
 

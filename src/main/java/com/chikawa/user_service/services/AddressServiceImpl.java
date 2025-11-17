@@ -8,6 +8,7 @@ import com.chikawa.user_service.models.Address;
 import com.chikawa.user_service.models.User;
 import com.chikawa.user_service.repositories.AddressRepository;
 import com.chikawa.user_service.repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -28,8 +30,8 @@ public class AddressServiceImpl implements AddressService {
     UserRepository userRepository;
 
     @Override
-    public ResponseEntity<ApiResponse<List<Address>>> getAllAddress() {
-        List<Address> addresses = addressRepository.findAll();
+    public ResponseEntity<ApiResponse<List<Address>>> getAllAddressByUserId(Long userId) {
+        List<Address> addresses = addressRepository.findAllByUserId(userId);
         if (addresses.isEmpty()) {
             return ResponseEntity.ok()
                     .body(
@@ -47,18 +49,33 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<Address>> createAddress(AddressCreateRequest request, Long userId) {
-        if (userRepository.existsById(userId)) {
+    public ResponseEntity<ApiResponse<Address>> addAddress(AddressCreateRequest request, Long userId) {
+        Optional<Address> addressDuplicate = addressRepository.findDuplicateAddress(
+                userId,
+                request.getCity(),
+                request.getLocationDetail(),
+                request.getPhoneNumber(),
+                request.getRecipientName(),
+                request.getCountry(),
+                request.getProvince()
+        );
+        //isPresent kiểm tra optional có giá trị k
+        if (addressDuplicate.isPresent()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(
                             ApiResponse.<Address>builder()
-                                    .code(ErrorCode.USER_EXISTED.getCode())
-                                    .message(ErrorCode.USER_EXISTED.getMessage())
+                                    .code(ErrorCode.ADDRESS_EXISTED.getCode())
+                                    .message(ErrorCode.ADDRESS_EXISTED.getMessage())
                                     .build()
                     );
         }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException(ErrorCode.USER_NOT_EXISTED.getMessage()));
+        if (user.getAddresses().size() == 0) {
+            request.setIsDefaultAddress(true);
+        } else {
+            request.setIsDefaultAddress(false);
+        }
         Address address = new Address().builder()
                 .user(user)
                 .city(request.getCity())
@@ -74,35 +91,51 @@ public class AddressServiceImpl implements AddressService {
         return ResponseEntity.ok()
                 .body(
                         ApiResponse.<Address>builder()
-                                .message("Successfully created address")
+                                .message("Successfully added address")
                                 .result(addressRepository.save(address))
                                 .build()
                 );
     }
 
     @Override
+    @Transactional
     public ResponseEntity<ApiResponse<Address>> updateAddress(AddressUpdateRequest request, Long addressId, Long userId) {
 
-        if (userRepository.existsById(userId)) {
+//        Optional<Address> addressDuplicate = addressRepository.findDuplicateAddress(
+//                userId,
+//                request.getCity(),
+//                request.getLocationDetail(),
+//                request.getPhoneNumber(),
+//                request.getRecipientName(),
+//                request.getCountry(),
+//                request.getProvince()
+//        );
+
+        if (!userRepository.existsById(userId)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(
                             ApiResponse.<Address>builder()
-                                    .code(ErrorCode.USER_EXISTED.getCode())
-                                    .message(ErrorCode.USER_EXISTED.getMessage())
-                                    .build()
-                    );
-        } else if (addressRepository.existsById(addressId)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(
-                            ApiResponse.<Address>builder()
-                                    .code(ErrorCode.ADDRESS_NOT_EXISTED.getCode())
-                                    .message(ErrorCode.ADDRESS_NOT_EXISTED.getMessage())
+                                    .code(ErrorCode.USER_NOT_EXISTED.getCode())
+                                    .message(ErrorCode.USER_NOT_EXISTED.getMessage())
                                     .build()
                     );
         }
+//        else if (addressDuplicate.isPresent()) {
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//                    .body(
+//                            ApiResponse.<Address>builder()
+//                                    .code(ErrorCode.ADDRESS_DUPLICATED.getCode())
+//                                    .message(ErrorCode.ADDRESS_DUPLICATED.getMessage())
+//                                    .build()
+//                    );
+//        }
 
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new RuntimeException(ErrorCode.ADDRESS_NOT_EXISTED.getMessage()));
+
+        if (Boolean.TRUE.equals(request.getIsDefaultAddress())) {
+            addressRepository.unsetDefaultAddress(userId);
+        }
 
         address.setCity(request.getCity());
         address.setLocationDetail(request.getLocationDetail());
@@ -124,7 +157,7 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public ResponseEntity<ApiResponse<?>> deleteAddress(Long id) {
-        if (addressRepository.existsById(id)) {
+        if (!addressRepository.existsById(id)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(
                             ApiResponse.builder()

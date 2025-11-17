@@ -2,11 +2,8 @@ package com.chikawa.user_service.controllers;
 
 import com.chikawa.user_service.dto.request.AddressCreateRequest;
 import com.chikawa.user_service.dto.request.AddressUpdateRequest;
-import com.chikawa.user_service.dto.request.UserCreationRequest;
-import com.chikawa.user_service.dto.request.UserUpdateRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.models.Address;
-import com.chikawa.user_service.models.User;
 import com.chikawa.user_service.services.AddressService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -29,12 +26,14 @@ public class AddressController {
             @RequestBody @Valid AddressCreateRequest request,
             @PathVariable Long userId
     ) {
-        return addressService.createAddress(request,userId);
+        return addressService.addAddress(request,userId);
     }
 
-    @GetMapping()
-    public ResponseEntity<ApiResponse<List<Address>>> getAllUser(){
-        return addressService.getAllAddress();
+    @GetMapping("/{userId}")
+    public ResponseEntity<ApiResponse<List<Address>>> getAllUser(
+            @PathVariable Long userId
+    ){
+        return addressService.getAllAddressByUserId(userId);
     }
 
     @PutMapping("/{userId}/{addressId}")

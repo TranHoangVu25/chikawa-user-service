@@ -9,6 +9,8 @@ public enum ErrorCode {
     USER_EXISTED(1001,"User email is existed",HttpStatus.BAD_REQUEST),
     USER_NOT_EXISTED(1002,"User Id is not existed",HttpStatus.BAD_REQUEST),
     ADDRESS_NOT_EXISTED(1003,"Address is not existed",HttpStatus.BAD_REQUEST),
+    ADDRESS_EXISTED(1004,"Address is existed",HttpStatus.BAD_REQUEST),
+    ADDRESS_DUPLICATED(1005,"Address is duplicated",HttpStatus.BAD_REQUEST),
 
     ;
     private int code;
