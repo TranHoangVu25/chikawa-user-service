@@ -2,6 +2,7 @@ package com.chikawa.user_service.services;
 
 import com.chikawa.user_service.dto.request.AuthenticationRequest;
 import com.chikawa.user_service.dto.request.IntrospectRequest;
+import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.dto.response.AuthenticationResponse;
 import com.chikawa.user_service.dto.response.IntrospectResponse;
 import com.chikawa.user_service.exception.ErrorCode;
@@ -18,6 +19,8 @@ import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -64,9 +67,20 @@ public class AuthenticationService {
                 .build();
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request) throws Exception {
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(AuthenticationRequest request) throws Exception {
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new Exception(ErrorCode.USER_NOT_EXISTED.getMessage()));
+
+        if (user.getConfirmedAt() == null) {
+            log.error(ErrorCode.EMAIL_NOT_CONFIRMED.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.<AuthenticationResponse>builder()
+                                    .message(ErrorCode.EMAIL_NOT_CONFIRMED.getMessage())
+                                    .build()
+                    );
+        }
+
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
         String rawPassword = request.getPassword().trim();
@@ -76,11 +90,19 @@ public class AuthenticationService {
         if (!authenticated) {
             throw new Exception("UNAUTHENTICATED");
         }
+
         var token = generateToken(user);
-        return AuthenticationResponse.builder()
-                .token(token)
-                .authenticated(true)
-                .build();
+
+        AuthenticationResponse authenticationResponse = new AuthenticationResponse(token, authenticated);
+
+        return ResponseEntity.ok()
+                .body(
+
+                        ApiResponse.<AuthenticationResponse>builder()
+                                .result(authenticationResponse)
+                                .message("Get token Successful")
+                                .build()
+                );
     }
 
     private SignedJWT verifyToken(String token, boolean isRefresh) throws Exception {

@@ -47,6 +47,7 @@ public class SecurityConfig {
                                         .requestMatchers(HttpMethod.GET, PUBLIC_END_POINT_GET_POST).permitAll()
                                         .requestMatchers(HttpMethod.POST, PUBLIC_END_POINT_GET_POST).permitAll()
                                         .requestMatchers(HttpMethod.PUT, PUBLIC_END_POINT_GET_POST).permitAll()
+                                        .requestMatchers(HttpMethod.DELETE, PUBLIC_END_POINT_GET_POST).permitAll()
 //                                        .requestMatchers(HttpMethod.GET, END_POINT_ADMIN).hasRole("ADMIN")
 //                                        .requestMatchers(HttpMethod.POST, END_POINT_ADMIN).hasRole("ADMIN")
 //                                        .requestMatchers(HttpMethod.GET,END_POINT_CUSTOMER).hasRole("USER")

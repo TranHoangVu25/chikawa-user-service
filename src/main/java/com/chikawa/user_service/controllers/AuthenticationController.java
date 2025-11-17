@@ -1,18 +1,19 @@
 package com.chikawa.user_service.controllers;
 
-import com.chikawa.user_service.dto.request.*;
+import com.chikawa.user_service.dto.request.AuthenticationRequest;
+import com.chikawa.user_service.dto.request.IntrospectRequest;
+import com.chikawa.user_service.dto.request.UserCreationRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.dto.response.AuthenticationResponse;
 import com.chikawa.user_service.dto.response.IntrospectResponse;
 import com.chikawa.user_service.services.AuthenticationService;
+import com.chikawa.user_service.services.UserService;
 import com.nimbusds.jose.JOSEException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
 
@@ -22,37 +23,35 @@ import java.text.ParseException;
 @FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
 public class AuthenticationController {
     AuthenticationService authenticationService;
+    UserService userService;
 
     @PostMapping("/token")
-    ApiResponse<AuthenticationResponse> authenticate (
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(
             @RequestBody AuthenticationRequest request
     ) throws Exception {
-        var result = authenticationService.authenticate(request);
-            return ApiResponse.<AuthenticationResponse>builder()
-                    .result(result)
-                    .build();
+        return authenticationService.authenticate(request);
         }
 
     @PostMapping("/introspect")
-    ApiResponse<IntrospectResponse> authenticate (@RequestBody IntrospectRequest request) throws ParseException, JOSEException {
+    public ApiResponse<IntrospectResponse> authenticate (@RequestBody IntrospectRequest request) throws ParseException, JOSEException {
         var result = authenticationService.introspect(request);
         return ApiResponse.<IntrospectResponse>builder()
                 .result(result)
                 .build();
     }
 
-//    @PostMapping("/refresh")
-//    ApiResponse<AuthenticationResponse> authenticate (@RequestBody RefreshRequest request) throws ParseException, JOSEException {
-//        var result = authenticationService.refreshToken(request);
-//        return ApiResponse.<AuthenticationResponse>builder()
-//                .result(result)
-//                .build();
-//    }
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<String>> register(
+            @RequestBody UserCreationRequest request
+    ) {
+        return userService.createUser(request);
+    }
 
-//    @PostMapping("/logout")
-//    ApiResponse<Void> logout (@RequestBody LogoutRequest request) throws ParseException, JOSEException {
-//        authenticationService.logout(request);
-//        return ApiResponse.<Void>builder()
-//                .build();
-//    }
+    @GetMapping("/confirm")
+    public ResponseEntity<ApiResponse<String>> confirmAccount(
+            @RequestParam("token") String token
+    ) {
+        return userService.confirmUser(token);
+    }
+
 }

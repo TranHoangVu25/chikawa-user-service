@@ -2,6 +2,7 @@ package com.chikawa.user_service.configuration;
 
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,10 +37,10 @@ public class CustomJwtDecoder implements JwtDecoder {
             }
 
             // check expiry
-//            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-//            if (claims.getExpirationTime() == null || claims.getExpirationTime().before(new java.util.Date())) {
-//                throw new JwtException("JWT token expired");
-//            }
+            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+            if (claims.getExpirationTime() == null || claims.getExpirationTime().before(new java.util.Date())) {
+                throw new JwtException("JWT token expired");
+            }
 
             // tạo NimbusJwtDecoder (lazy init)
             if (Objects.isNull(nimbusJwtDecoder)) {

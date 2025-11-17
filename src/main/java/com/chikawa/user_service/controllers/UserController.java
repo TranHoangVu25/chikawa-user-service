@@ -22,7 +22,7 @@ public class UserController {
     UserService userService;
 
     @PostMapping()
-    public ResponseEntity<ApiResponse<User>> createUser(
+    public ResponseEntity<ApiResponse<String>> createUser(
             @RequestBody @Valid UserCreationRequest request
     ) {
         return userService.createUser(request);

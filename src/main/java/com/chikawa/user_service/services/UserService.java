@@ -13,9 +13,12 @@ import java.util.List;
 public interface UserService {
     ResponseEntity<ApiResponse<List<User>>> getAllUser ();
 
-    ResponseEntity<ApiResponse<User>> createUser (UserCreationRequest request);
+    ResponseEntity<ApiResponse<String>> createUser (UserCreationRequest request);
 
     ResponseEntity<ApiResponse<User>> updateUser(UserUpdateRequest request, Long id);
 
      ResponseEntity<ApiResponse<?>> deleteUser(Long id);
+
+    ResponseEntity<ApiResponse<String>> confirmUser(String token);
+
 }
