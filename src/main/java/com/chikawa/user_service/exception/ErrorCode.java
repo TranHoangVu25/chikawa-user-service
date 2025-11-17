@@ -11,6 +11,7 @@ public enum ErrorCode {
     ADDRESS_NOT_EXISTED(1003,"Address is not existed",HttpStatus.BAD_REQUEST),
     ADDRESS_EXISTED(1004,"Address is existed",HttpStatus.BAD_REQUEST),
     ADDRESS_DUPLICATED(1005,"Address is duplicated",HttpStatus.BAD_REQUEST),
+    UNAUTHENTICATED(1006,"Token expired",HttpStatus.BAD_REQUEST),
 
     ;
     private int code;

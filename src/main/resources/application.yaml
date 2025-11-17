@@ -13,5 +13,9 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
 
+jwt:
+  signerKey: "3m47O+gM3Sc0lc9I5pMhfGFZMoqvbFtLoNs6Lmq9nOg="
+  valid-duration: 3600
+  refreshable-duration: 36000
 server:
   port: 8085

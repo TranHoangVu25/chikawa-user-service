@@ -12,10 +12,9 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -26,6 +25,7 @@ import java.util.UUID;
 @Slf4j
 public class UserServiceImpl implements UserService {
     UserRepository userRepository;
+    PasswordEncoder passwordEncoder;
 
     @Override
     public ResponseEntity<ApiResponse<List<User>>> getAllUser() {
@@ -58,11 +58,13 @@ public class UserServiceImpl implements UserService {
         }
         String jti = UUID.randomUUID().toString();
 
+        String password = passwordEncoder.encode(request.getEncryptedPassword());
+
         User user = new User().builder()
                 .email(request.getEmail())
                 .fullName(request.getFullName())
                 .jti(jti)
-                .encryptedPassword(request.getEncryptedPassword()) //need update
+                .encryptedPassword(password)
                 .confirmationToken(request.getConfirmationToken()) //need update
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -92,8 +94,15 @@ public class UserServiceImpl implements UserService {
                     );
         }
         User user = userRepository.findById(id).get();
+        if(request.getEncryptedPassword()==null){
+            user.setEncryptedPassword(user.getEncryptedPassword());
+        }else {
+            String password = passwordEncoder.encode(request.getEncryptedPassword());
+            user.setEncryptedPassword(password);
+        }
+
         user.setFullName(request.getFullName());
-        user.setEncryptedPassword(request.getEncryptedPassword());
+//        user.setEncryptedPassword(request.getEncryptedPassword());
         user.setUpdatedAt(LocalDateTime.now());
         return ResponseEntity.ok()
                 .body(
