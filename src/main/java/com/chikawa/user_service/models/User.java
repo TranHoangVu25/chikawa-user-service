@@ -61,7 +61,7 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Column(nullable = false)
-    private String role = "customer";
+    private String role = "CUSTOMER";
 
     //id trong line
     @Column(name = "line_user_id", unique = true)

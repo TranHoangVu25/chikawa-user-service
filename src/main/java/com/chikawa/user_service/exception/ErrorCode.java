@@ -13,7 +13,8 @@ public enum ErrorCode {
     ADDRESS_DUPLICATED(1005,"Address is duplicated",HttpStatus.BAD_REQUEST),
     UNAUTHENTICATED(1006,"Token expired",HttpStatus.BAD_REQUEST),
     INVALID_TOKEN(1007,"Token is not valid",HttpStatus.BAD_REQUEST),
-    EMAIL_NOT_CONFIRMED(1007,"Email has not confirmed yet",HttpStatus.BAD_REQUEST),
+    EMAIL_NOT_CONFIRMED(1008,"Email has not confirmed yet",HttpStatus.BAD_REQUEST),
+    ACCOUNT_PASSWORD_NOT_CORRECT(1009,"Email or password is incorrect",HttpStatus.BAD_REQUEST),
 
 
     ;

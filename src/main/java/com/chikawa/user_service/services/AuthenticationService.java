@@ -80,15 +80,21 @@ public class AuthenticationService {
                                     .build()
                     );
         }
-
+        //mã hóa mật khẩu user nhập
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
         String rawPassword = request.getPassword().trim();
 
+        //so sánh mật khẩu mã hóa và mật khẩu trong db
         boolean authenticated = passwordEncoder.matches(rawPassword, user.getEncryptedPassword());
 
         if (!authenticated) {
-            throw new Exception("UNAUTHENTICATED");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.<AuthenticationResponse>builder()
+                                    .message(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage())
+                                    .build()
+                    );
         }
 
         var token = generateToken(user);
