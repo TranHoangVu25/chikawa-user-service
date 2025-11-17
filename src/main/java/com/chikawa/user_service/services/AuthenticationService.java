@@ -1,5 +1,6 @@
 package com.chikawa.user_service.services;
 
+import com.chikawa.user_service.dto.ForgotPasswordDTO;
 import com.chikawa.user_service.dto.request.AuthenticationRequest;
 import com.chikawa.user_service.dto.request.IntrospectRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
@@ -8,6 +9,8 @@ import com.chikawa.user_service.dto.response.IntrospectResponse;
 import com.chikawa.user_service.exception.ErrorCode;
 import com.chikawa.user_service.models.User;
 import com.chikawa.user_service.repositories.UserRepository;
+import com.chikawa.user_service.utils.GenerateRandomPassword;
+import com.chikawa.user_service.utils.SendEmail;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -38,6 +41,8 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationService {
     UserRepository userRepository;
+    PasswordEncoder passwordEncoder;
+    SendEmail sendEmail;
 
     @NonFinal //không bị inject contructor
     @Value("${jwt.signerKey}") //anotation này được sử dụng để đọc biến trong file .yaml
@@ -51,6 +56,8 @@ public class AuthenticationService {
     @NonFinal
     @Value("${jwt.refreshable-duration}")
     protected Long REFRESHABLE_DURATION;
+
+    GenerateRandomPassword generateRandomPassword;
 
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
         var token = request.getToken();
@@ -186,5 +193,45 @@ public class AuthenticationService {
     public boolean checkPassword(String rawPassword,String hashPassword){
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         return passwordEncoder.matches(rawPassword,hashPassword);
+    }
+
+    public ResponseEntity<ApiResponse<String>> forgotPassWord(ForgotPasswordDTO forgotPasswordDTO) {
+        if(!userRepository.existsByEmail(forgotPasswordDTO.getEmail())) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .code(ErrorCode.USER_NOT_EXISTED.getCode())
+                                    .message(ErrorCode.USER_NOT_EXISTED.getMessage())
+                                    .build()
+                    );
+        }
+
+        User user = userRepository.findByEmail(forgotPasswordDTO.getEmail())
+                .orElseThrow(()->new RuntimeException(ErrorCode.USER_NOT_EXISTED.getMessage()));
+
+        if (user.getConfirmedAt()==null){
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .code(ErrorCode.EMAIL_NOT_CONFIRMED.getCode())
+                                    .message(ErrorCode.EMAIL_NOT_CONFIRMED.getMessage())
+                                    .build()
+                    );
+        }
+        String new_password = generateRandomPassword.generateRandomPassword(10);
+
+        String password = passwordEncoder.encode(new_password);
+        user.setEncryptedPassword(password);
+        userRepository.save(user);
+
+        //gọi method gửi email
+        sendEmail.sendEmailForgotPassword(new_password,user.getEmail());
+
+         return ResponseEntity.ok()
+                .body(
+                        ApiResponse.<String>builder()
+                                .message("Check inbox to see new password!")
+                                .build()
+                );
     }
 }

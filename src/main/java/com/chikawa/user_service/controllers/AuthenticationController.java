@@ -1,6 +1,7 @@
 package com.chikawa.user_service.controllers;
 
 import com.chikawa.user_service.configuration.CustomJwtDecoder;
+import com.chikawa.user_service.dto.ForgotPasswordDTO;
 import com.chikawa.user_service.dto.request.AuthenticationRequest;
 import com.chikawa.user_service.dto.request.IntrospectRequest;
 import com.chikawa.user_service.dto.request.UserCreationRequest;
@@ -95,5 +96,12 @@ public class AuthenticationController {
                                     .message(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage())
                                     .build());
         }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(
+            @RequestBody @Valid ForgotPasswordDTO forgotPasswordDTO
+            ){
+        return authenticationService.forgotPassWord(forgotPasswordDTO);
     }
 }

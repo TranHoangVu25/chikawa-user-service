@@ -65,7 +65,7 @@ public class UserServiceImpl implements UserService {
 
                 userRepository.save(user_existing);
 
-                sendEmail.sendEmail(confirm_token,request.getEmail());
+                sendEmail.sendEmailRegister(confirm_token,request.getEmail());
 
                 return ResponseEntity.ok()
                         .body(
@@ -103,7 +103,7 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         //method gửi email
-        sendEmail.sendEmail(confirmToken,user.getEmail());
+        sendEmail.sendEmailRegister(confirmToken,user.getEmail());
 
         return ResponseEntity.ok(
                 ApiResponse.<String>builder()
@@ -191,4 +191,5 @@ public class UserServiceImpl implements UserService {
                         .build()
         );
     }
+
 }
