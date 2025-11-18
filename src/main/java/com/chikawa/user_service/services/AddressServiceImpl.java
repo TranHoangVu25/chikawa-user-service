@@ -100,17 +100,6 @@ public class AddressServiceImpl implements AddressService {
     @Override
     @Transactional
     public ResponseEntity<ApiResponse<Address>> updateAddress(AddressUpdateRequest request, Long addressId, Long userId) {
-
-//        Optional<Address> addressDuplicate = addressRepository.findDuplicateAddress(
-//                userId,
-//                request.getCity(),
-//                request.getLocationDetail(),
-//                request.getPhoneNumber(),
-//                request.getRecipientName(),
-//                request.getCountry(),
-//                request.getProvince()
-//        );
-
         if (!userRepository.existsById(userId)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(
@@ -120,15 +109,6 @@ public class AddressServiceImpl implements AddressService {
                                     .build()
                     );
         }
-//        else if (addressDuplicate.isPresent()) {
-//            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                    .body(
-//                            ApiResponse.<Address>builder()
-//                                    .code(ErrorCode.ADDRESS_DUPLICATED.getCode())
-//                                    .message(ErrorCode.ADDRESS_DUPLICATED.getMessage())
-//                                    .build()
-//                    );
-//        }
 
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new RuntimeException(ErrorCode.ADDRESS_NOT_EXISTED.getMessage()));

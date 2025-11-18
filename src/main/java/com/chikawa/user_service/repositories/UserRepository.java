@@ -16,4 +16,8 @@ public interface UserRepository extends JpaRepository<User,Long> {
 
     Optional<User> findByConfirmationToken(String token);
 
+    Optional<User> findByLineUserId(String lineUserId);
+
+    boolean existsByLineUserId(String lineUserId);
+
 }

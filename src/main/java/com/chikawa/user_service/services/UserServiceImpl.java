@@ -163,6 +163,7 @@ public class UserServiceImpl implements UserService {
                 );
     }
 
+    //hàm xác nhận user khi chọn xác nhận trong mail
     @Override
     @Transactional
     public ResponseEntity<ApiResponse<String>> confirmUser(String token) {

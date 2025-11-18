@@ -1,38 +1,29 @@
 package com.chikawa.user_service.controllers;
 
+import com.chikawa.user_service.services.LineLoginService;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
+import java.text.ParseException;
 
 @RestController
 @RequestMapping("/api/v1/auth/line")
+@RequiredArgsConstructor
 public class LineLoginController {
 
-    @Value("${line.channel.id}")
-    private String channelId;
-
-    @Value("${line.channel.redirect-uri}")
-    private String redirectUri;
+    private final LineLoginService lineLoginService;
 
     @GetMapping("/login")
     public void login(HttpServletResponse response) throws IOException {
-        String state = UUID.randomUUID().toString(); // dùng để chống CSRF
-        String scope = "profile openid email";
-
-        String url = "https://access.line.me/oauth2/v2.1/authorize"
-                + "?response_type=code"
-                + "&client_id=" + channelId
-                + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
-                + "&state=" + state
-                + "&scope=" + URLEncoder.encode(scope, StandardCharsets.UTF_8);
-
+        String url = lineLoginService.generateLoginUrl();
         response.sendRedirect(url);
+    }
+
+    @GetMapping("/callback")
+    public ResponseEntity<?> callback(@RequestParam("code") String code) throws ParseException {
+        return ResponseEntity.ok(lineLoginService.handleCallback(code));
     }
 }
