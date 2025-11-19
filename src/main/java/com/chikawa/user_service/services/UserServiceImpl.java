@@ -1,8 +1,11 @@
 package com.chikawa.user_service.services;
 
+import com.chikawa.user_service.configuration.RabbitMQConfig;
 import com.chikawa.user_service.dto.request.UserCreationRequest;
+import com.chikawa.user_service.dto.request.UserSendEvent;
 import com.chikawa.user_service.dto.request.UserUpdateRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
+import com.chikawa.user_service.enums.Action;
 import com.chikawa.user_service.exception.ErrorCode;
 import com.chikawa.user_service.models.User;
 import com.chikawa.user_service.repositories.UserRepository;
@@ -12,6 +15,8 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +34,7 @@ public class UserServiceImpl implements UserService {
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
     SendEmail sendEmail;
+    RabbitTemplate rabbitTemplate;
 
     @Override
     public ResponseEntity<ApiResponse<List<User>>> getAllUser() {
@@ -83,7 +89,7 @@ public class UserServiceImpl implements UserService {
                     );
         }
         String confirmToken = UUID.randomUUID().toString();
-
+        //mã hóa mật khẩu
         String password = passwordEncoder.encode(request.getEncryptedPassword());
 
         User user = new User().builder()
@@ -113,8 +119,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<User>> updateUser(UserUpdateRequest request, Long id) {
-        if (!userRepository.existsById(id)){
+    public ResponseEntity<ApiResponse<User>> updateUser(UserUpdateRequest request, Long userId) {
+        //Trường hợp userId không tồn tại
+        if (!userRepository.existsById(userId)){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(
                             ApiResponse.<User>builder()
@@ -123,7 +130,9 @@ public class UserServiceImpl implements UserService {
                                     .build()
                     );
         }
-        User user = userRepository.findById(id).get();
+
+        User user = userRepository.findById(userId).get();
+        //nếu k có thay đổi về mật khẩu thì dùng mật khẩu cũ
         if(request.getEncryptedPassword()==null){
             user.setEncryptedPassword(user.getEncryptedPassword());
         }else {
@@ -132,20 +141,38 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setFullName(request.getFullName());
-//        user.setEncryptedPassword(request.getEncryptedPassword());
         user.setUpdatedAt(LocalDateTime.now());
+
+        //lưu thông tin thay đổi vào db
+        User saved_user = userRepository.save(user);
+
+        Action action = Action.UPDATE;
+        UserSendEvent event = new UserSendEvent().builder()
+                .id(saved_user.getId())
+                .fullName(saved_user.getFullName())
+                .updatedAt(saved_user.getUpdatedAt())
+                .action(action)
+                .build();
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE,
+                "",
+                event
+        );
+
         return ResponseEntity.ok()
                 .body(
                         ApiResponse.<User>builder()
                                 .message("Update user successfully")
-                                .result(userRepository.save(user))
+                                .result(saved_user)
                                 .build()
                 );
     }
 
+    //xóa user và gửi event qua promotion
     @Override
-    public ResponseEntity<ApiResponse<?>> deleteUser(Long id) {
-        if (!userRepository.existsById(id)){
+    public ResponseEntity<ApiResponse<?>> deleteUser(Long userId) {
+        if (!userRepository.existsById(userId)){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(
                             ApiResponse.<User>builder()
@@ -154,7 +181,20 @@ public class UserServiceImpl implements UserService {
                                     .build()
                     );
         }
-        userRepository.deleteById(id);
+        userRepository.deleteById(userId);
+
+        Action action = Action.DELETE;
+
+        UserSendEvent event = new UserSendEvent().builder()
+                .id(userId)
+                .action(action)
+                .build();
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE,
+                "",
+                event
+        );
         return ResponseEntity.ok()
                 .body(
                         ApiResponse.builder()
@@ -186,6 +226,28 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
+        Integer monthOfBirth = null;
+        if (user.getDob() != null) {
+            monthOfBirth = user.getDob().getMonthValue();
+        }
+        Action action = Action.CREATE;
+        UserSendEvent event = new UserSendEvent().builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .lineUserId(user.getLineUserId())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .monthOfBirth(monthOfBirth)
+                .action(action)
+                .build();
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE,
+//                    RabbitMQConfig.ROUTING_KEY,   routing key cho kiểu topic
+                "", //routing key cho fanout là ""
+                event
+        );
         return ResponseEntity.ok(
                 ApiResponse.<String>builder()
                         .message("Account confirmed successfully")
