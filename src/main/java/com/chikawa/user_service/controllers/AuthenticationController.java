@@ -34,7 +34,6 @@ public class AuthenticationController {
     UserService userService;
     CustomJwtDecoder customJwtDecoder;
 
-
     //truyền tài khoản mật khẩu vào sẽ trả về token (jwt)
     @PostMapping("/token")
     public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(

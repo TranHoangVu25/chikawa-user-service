@@ -21,6 +21,7 @@ import java.util.List;
 public class AddressController {
     AddressService addressService;
 
+    //thêm địa chỉ cho user
     @PostMapping("/{userId}") //sau sửa = id trong jwt
     public ResponseEntity<ApiResponse<Address>> createUser(
             @RequestBody @Valid AddressCreateRequest request,
@@ -29,6 +30,7 @@ public class AddressController {
         return addressService.addAddress(request,userId);
     }
 
+    //lấy tất cả các address của user theo id
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<List<Address>>> getAllUser(
             @PathVariable Long userId
@@ -36,6 +38,7 @@ public class AddressController {
         return addressService.getAllAddressByUserId(userId);
     }
 
+    //sửa địa chỉ
     @PutMapping("/{userId}/{addressId}")
     public ResponseEntity<ApiResponse<Address>> updateUser(
             @RequestBody @Valid AddressUpdateRequest request,
@@ -45,6 +48,7 @@ public class AddressController {
         return addressService.updateAddress(request,addressId,userId);
     }
 
+    //xóa địa chỉ
     @DeleteMapping("/{addressId}")
     public ResponseEntity<ApiResponse<?>> deleteUser(
             @PathVariable Long addressId

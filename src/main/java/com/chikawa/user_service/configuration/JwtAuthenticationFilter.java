@@ -1,7 +1,5 @@
 package com.chikawa.user_service.configuration;
 
-import com.chikawa.user_service.configuration.CustomJwtDecoder;
-import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

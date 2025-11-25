@@ -161,6 +161,7 @@ public class AuthenticationService {
                 ))
 
                 .claim("scope", buildScope(user))
+                .claim("role",buildScope(user))
                 .claim("userId", user.getId())
                 .claim("full_name",user.getFullName())
                 //#16 thêm vào ID của jwt để lưu trữ token gần nhất mới hết hạn trong db

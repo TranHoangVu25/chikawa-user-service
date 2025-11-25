@@ -89,13 +89,15 @@ public class UserServiceImpl implements UserService {
                     );
         }
         String confirmToken = UUID.randomUUID().toString();
+        String jit = UUID.randomUUID().toString();
+
         //mã hóa mật khẩu
         String password = passwordEncoder.encode(request.getEncryptedPassword());
 
         User user = new User().builder()
                 .email(request.getEmail())
                 .fullName(request.getFullName())
-                .jti(request.getJti())
+                .jti(jit)
                 .encryptedPassword(password)
                 .confirmationToken(confirmToken)
                 .confirmationSentAt(LocalDateTime.now())
@@ -190,11 +192,11 @@ public class UserServiceImpl implements UserService {
                 .action(action)
                 .build();
 
-        rabbitTemplate.convertAndSend(
-                RabbitMQConfig.EXCHANGE,
-                "",
-                event
-        );
+//        rabbitTemplate.convertAndSend(
+//                RabbitMQConfig.EXCHANGE,
+//                "",
+//                event
+//        );
         return ResponseEntity.ok()
                 .body(
                         ApiResponse.builder()
@@ -220,7 +222,7 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setCreatedAt(LocalDateTime.now());
-        user.setConfirmationToken(null);   // Xoá token sau khi xác nhận
+        user.setConfirmationToken(null);
         user.setUpdatedAt(LocalDateTime.now());
         user.setConfirmedAt(LocalDateTime.now());
 
@@ -254,5 +256,4 @@ public class UserServiceImpl implements UserService {
                         .build()
         );
     }
-
 }
