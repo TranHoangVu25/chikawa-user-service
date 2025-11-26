@@ -217,7 +217,7 @@ public class UserServiceImpl implements UserService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.<String>builder()
                             .code(ErrorCode.INVALID_TOKEN.getCode())
-                            .message("Invalid or expired token")
+                            .message("Failed")
                             .build());
         }
 
@@ -252,7 +252,7 @@ public class UserServiceImpl implements UserService {
         );
         return ResponseEntity.ok(
                 ApiResponse.<String>builder()
-                        .message("Account confirmed successfully")
+                        .message("Successfully")
                         .build()
         );
     }

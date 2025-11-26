@@ -5,6 +5,7 @@ import com.chikawa.user_service.dto.request.AddressUpdateRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.models.Address;
 import com.chikawa.user_service.services.AddressService;
+import com.chikawa.user_service.utils.UserContextHolder;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -22,29 +23,35 @@ public class AddressController {
     AddressService addressService;
 
     //thêm địa chỉ cho user
-    @PostMapping("/{userId}") //sau sửa = id trong jwt
+//    @PostMapping("/{userId}") //sau sửa = id trong jwt
+    @PostMapping() //sau sửa = id trong jwt
     public ResponseEntity<ApiResponse<Address>> createUser(
-            @RequestBody @Valid AddressCreateRequest request,
-            @PathVariable Long userId
+            @RequestBody @Valid AddressCreateRequest request
+//            @PathVariable Long userId
     ) {
+        Long userId = UserContextHolder.getUserId();
         return addressService.addAddress(request,userId);
     }
 
     //lấy tất cả các address của user theo id
-    @GetMapping("/{userId}")
+//    @GetMapping("/{userId}")
+    @GetMapping()
     public ResponseEntity<ApiResponse<List<Address>>> getAllUser(
-            @PathVariable Long userId
+//            @PathVariable Long userId
     ){
+        Long userId = UserContextHolder.getUserId();
         return addressService.getAllAddressByUserId(userId);
     }
 
     //sửa địa chỉ
-    @PutMapping("/{userId}/{addressId}")
+//    @PutMapping("/{userId}/{addressId}")
+    @PutMapping("/{addressId}")
     public ResponseEntity<ApiResponse<Address>> updateUser(
             @RequestBody @Valid AddressUpdateRequest request,
-            @PathVariable Long userId,
+//            @PathVariable Long userId,
             @PathVariable Long addressId
     ){
+        Long userId = UserContextHolder.getUserId();
         return addressService.updateAddress(request,addressId,userId);
     }
 

@@ -1,5 +1,6 @@
 package com.chikawa.user_service.configuration;
 
+import com.chikawa.user_service.utils.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,106 +17,85 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // thêm vào để có thể phân quyền = @PreAuthorized mà không cần phân quyền = endpoint
-
+@EnableMethodSecurity
 public class SecurityConfig {
-    private final String[] PUBLIC_END_POINT_GET_POST = {
-            "/api/v1/**", "/register", "/forgot-password","/auth/**"
-    };
-    private final String[] END_POINT_ADMIN = {
-            "/users/**"
-    };
-    private final String[] END_POINT_CUSTOMER = {
-            "/users/**", "/home-page"
+
+    private final String[] PUBLIC_ENDPOINTS = {
+            "/api/v1/**",
+            "/register",
+            "/forgot-password",
+            "/auth/**"
     };
 
     @Autowired
     CustomJwtDecoder customJwtDecoder;
 
-    @Autowired
-    AuthenticationEntryPoint customAuthenticationEntryPoint;
+//    @Autowired
+//    AuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.authorizeHttpRequests(
-                        request ->
-                                request
-//                                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-                                        .requestMatchers(HttpMethod.GET, PUBLIC_END_POINT_GET_POST).permitAll()
-                                        .requestMatchers(HttpMethod.POST, PUBLIC_END_POINT_GET_POST).permitAll()
-                                        .requestMatchers(HttpMethod.PUT, PUBLIC_END_POINT_GET_POST).permitAll()
-                                        .requestMatchers(HttpMethod.DELETE, PUBLIC_END_POINT_GET_POST).permitAll()
-//                                        .requestMatchers(HttpMethod.GET, END_POINT_ADMIN).hasRole("ADMIN")
-//                                        .requestMatchers(HttpMethod.POST, END_POINT_ADMIN).hasRole("ADMIN")
-//                                        .requestMatchers(HttpMethod.GET,END_POINT_CUSTOMER).hasRole("USER")
-//                                        .requestMatchers(HttpMethod.POST,END_POINT_CUSTOMER).hasRole("USER")
-                                        .requestMatchers(HttpMethod.GET).permitAll()
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
 
-                                        .anyRequest().authenticated());
-
-        //thực hiện request mà cung cấp 1 token của user thì server sẽ xác thực người dùng
-        //dựa trên token để cấp quyền truy cập
-//            httpSecurity.oauth2ResourceServer(oauth2 ->
-//                    oauth2.jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder()))
-//                    );
-        httpSecurity
-                .addFilterBefore(new JwtSessionFilter(), UsernamePasswordAuthenticationFilter.class)
+        http
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers(HttpMethod.GET).permitAll() // tất cả GET tạm thời mở
+                        .requestMatchers(HttpMethod.POST).permitAll()
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .oauth2ResourceServer(oauth2 ->
-                                oauth2.jwt(jwtConfigurer ->
-                                                jwtConfigurer.decoder(customJwtDecoder)
-                                                        .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                                        )
-                                        .authenticationEntryPoint(customAuthenticationEntryPoint) // config tất cả các endpoint
-                        //k có quyền truy cập đều phải quay trở về form login
+                        oauth2.jwt(jwt -> jwt
+                                        .decoder(customJwtDecoder)
+                                        .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                                )
+//                                .authenticationEntryPoint(customAuthenticationEntryPoint)
+                )
+                .cors(withDefaults())
+                .csrf(AbstractHttpConfigurer::disable);
 
-                );
-        httpSecurity.cors(withDefaults());
-
-
-        //         httpSecurity.csrf(httpSecurityCsrfConfigurer -> httpSecurityCsrfConfigurer.disable());
-        //tương tự dòng trên nhưng là dùng lambda
-        httpSecurity.csrf(AbstractHttpConfigurer::disable);
-
-        return httpSecurity.build();
+        return http.build();
     }
 
     @Bean
-    JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        jwtGrantedAuthoritiesConverter.setAuthorityPrefix("");
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter converter = new JwtGrantedAuthoritiesConverter();
+        converter.setAuthorityPrefix("");
 
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
-
-        return jwtAuthenticationConverter;
+        JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
+        jwtConverter.setJwtGrantedAuthoritiesConverter(converter);
+        return jwtConverter;
     }
 
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(10);
     }
+
+    // ---------------- CORS CHUẨN NHẤT ------------------
     @Bean
-    public CorsFilter corsFilter() {
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
+    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
 
-//        corsConfiguration.addAllowedOrigin("*");
-        corsConfiguration.addAllowedOrigin("http://localhost:5173");
+        CorsConfiguration config = new CorsConfiguration();
 
-        // Dòng này cần thiết để hỗ trợ `credentials: 'include'`
-        corsConfiguration.setAllowCredentials(true);
-        corsConfiguration.addAllowedMethod("*");
-        corsConfiguration.addAllowedHeader("*");
+        // FE đang chạy ở localhost:5173
+        config.addAllowedOriginPattern("*");
+        // Nếu FE cố định:
+        // config.addAllowedOriginPattern("http://localhost:5173");
 
+        config.setAllowCredentials(true);
+        config.addAllowedMethod("*");
+        config.addAllowedHeader("*");
+        config.addExposedHeader("Authorization");
 
-        UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
-        urlBasedCorsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
 
-        return new CorsFilter(urlBasedCorsConfigurationSource);
+        return source;
     }
 }

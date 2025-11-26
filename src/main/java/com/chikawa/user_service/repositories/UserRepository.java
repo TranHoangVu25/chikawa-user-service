@@ -20,4 +20,5 @@ public interface UserRepository extends JpaRepository<User,Long> {
 
     boolean existsByLineUserId(String lineUserId);
 
+
 }

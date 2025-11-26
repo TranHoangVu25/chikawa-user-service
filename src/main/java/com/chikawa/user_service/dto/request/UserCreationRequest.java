@@ -1,5 +1,7 @@
 package com.chikawa.user_service.dto.request;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,15 +15,16 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class UserCreationRequest {
-    private String email = "";
-    private String fullName = "";
+    @NotBlank @Email
+    private String email;
+    @NotBlank
+    private String fullName;
     private String jti = "";
-    private String encryptedPassword = "";
+    @NotBlank
+    private String encryptedPassword;
     private String confirmationToken;
     private LocalDateTime confirmedAt;
     private LocalDateTime confirmationSentAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     private String role = "customer";
     private Integer signInCount;
     private LocalDateTime currentSignInAt;

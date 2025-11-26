@@ -9,6 +9,8 @@ import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.dto.response.AuthenticationResponse;
 import com.chikawa.user_service.dto.response.IntrospectResponse;
 import com.chikawa.user_service.exception.ErrorCode;
+import com.chikawa.user_service.models.User;
+import com.chikawa.user_service.repositories.UserRepository;
 import com.chikawa.user_service.services.AuthenticationService;
 import com.chikawa.user_service.services.UserService;
 import com.nimbusds.jose.JOSEException;
@@ -17,11 +19,14 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.text.ParseException;
 
 @RestController
@@ -33,6 +38,7 @@ public class AuthenticationController {
     AuthenticationService authenticationService;
     UserService userService;
     CustomJwtDecoder customJwtDecoder;
+    UserRepository userRepository;
 
     //truyền tài khoản mật khẩu vào sẽ trả về token (jwt)
     @PostMapping("/token")
@@ -64,38 +70,64 @@ public class AuthenticationController {
     public ResponseEntity<ApiResponse<String>> confirmAccount(
             @RequestParam("token") String token
     ) {
-        return userService.confirmUser(token);
+        String result = userService.confirmUser(token).getBody().getMessage();
+
+        String redirectUrl;
+
+        if ("Failed".equalsIgnoreCase(result)) {
+            redirectUrl = "https://your-frontend.com/error?reason=confirm_failed";
+        } else {
+            redirectUrl = "http://localhost:5173/account/login";
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(URI.create(redirectUrl));
+
+        return new ResponseEntity<>(headers, HttpStatus.FOUND); // HTTP 302 Redirect
     }
 
     @PostMapping("/login")
-//    public ResponseEntity<ApiResponse<AuthenticationResponse>> login(
-    public ResponseEntity<ApiResponse<String>> login(
+    public ResponseEntity<ApiResponse<User>> login(
             @RequestBody @Valid AuthenticationRequest request
     ) {
         try {
-        AuthenticationResponse response = authenticationService.authenticate(request)
-                .getBody().getResult();
-        String jwt = response.getToken();
-        Jwt decodedJwt = customJwtDecoder.decode(jwt);
-        String scope = decodedJwt.getClaimAsString("scope");
-        String full_name = decodedJwt.getClaimAsString("full_name");
-        int userId = Integer.parseInt(decodedJwt.getClaimAsString("userId"));
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(
-                        ApiResponse.<String>builder()
-                                .message("Login with role: "+scope)
-                                .build()
-                );
-        }catch (Exception e){
-            log.error(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            AuthenticationResponse response = authenticationService.authenticate(request)
+                    .getBody().getResult();
+
+            String jwt = response.getToken();
+            Jwt decodedJwt = customJwtDecoder.decode(jwt);
+            String scope = decodedJwt.getClaimAsString("scope");
+            Long userId = Long.valueOf(decodedJwt.getClaimAsString("userId"));
+
+            User u = userRepository.findById(userId).orElseThrow();
+            User user = new User().builder()
+                    .email(u.getEmail())
+                    .id(u.getId())
+                    .fullName(u.getFullName())
+                    .lineUserId(u.getLineUserId())
+                    .build();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt)
                     .body(
-                            ApiResponse.<String>builder()
+                            ApiResponse.<User>builder()
+                                    .message("Login with role: " + scope)
+                                    .result(user)
+                                    .build()
+                    );
+
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<User>builder()
                                     .code(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getCode())
                                     .message(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage())
-                                    .build());
+                                    .build()
+                    );
         }
     }
+
 
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(
