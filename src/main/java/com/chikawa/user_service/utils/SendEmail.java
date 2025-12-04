@@ -15,8 +15,8 @@ public class SendEmail {
     EmailService emailService;
 
     public void sendEmailRegister(String confirmToken, String email) {
-//        String link = "http://localhost:8085/api/v1/auth/confirm?token=" + confirmToken;
-        String link = "https://fearsome-ollie-correspondently.ngrok-free.dev/api/v1/auth/confirm?token=" + confirmToken;
+        String link = "http://localhost:8085/api/v1/auth/confirm?token=" + confirmToken;
+//        String link = "https://fearsome-ollie-correspondently.ngrok-free.dev/api/v1/auth/confirm?token=" + confirmToken;
         String htmlContent =
                 "<div style='font-family:Arial, sans-serif; line-height:1.6; padding:20px; color:#333;'>"
                         + "<h2 style='color:#ff6f61;'>Chiikawa Goods Shop</h2>"
@@ -44,20 +44,26 @@ public class SendEmail {
         emailService.sendMail(email, "Chiikawa Goods Shop - Account Confirmation", htmlContent);
     }
 
-    public void sendEmailForgotPassword(String newPassword, String email) {
+    public void sendEmailForgotPassword(String confirmToken, String email) {
+
+        String link = "http://localhost:8085/api/v1/auth/confirm-forgot?token=" + confirmToken;
+
         String htmlContent =
                 "<div style='font-family:Arial, sans-serif; line-height:1.6; padding:20px; color:#333;'>"
                         + "<h2 style='color:#ff6f61;'>Chiikawa Goods Shop</h2>"
                         + "<p>Hello,</p>"
-                        + "<p>Your password has been reset successfully. Here is your new password:</p>"
+                        + "<p>We received a request to reset your password.</p>"
+                        + "<p>Please click the button below to continue resetting your password:</p>"
 
-                        + "<div style='margin:20px 0; padding:15px; background-color:#f7f7f7; "
-                        + "border-left:4px solid #ff6f61; font-weight:bold;'>"
-                        + newPassword
+                        + "<div style='margin:30px 0;'>"
+                        + "    <a href='" + link + "' "
+                        + "       style='display:inline-block; padding:12px 22px; background-color:#ff6f61; "
+                        + "              color:white; text-decoration:none; border-radius:6px; font-weight:bold;'>"
+                        + "        Reset Password"
+                        + "    </a>"
                         + "</div>"
 
-                        + "<p>For security reasons, please change this password after logging in.</p>"
-                        + "<p>If you did not request a password reset, please contact our support immediately.</p>"
+                        + "<p>If you did not request a password reset, please ignore this email.</p>"
                         + "<p>Best regards,<br><strong>Chiikawa Goods Shop Team</strong></p>"
 
                         + "<hr style='margin-top:40px; border:none; border-top:1px solid #eee;'/>"
@@ -66,7 +72,6 @@ public class SendEmail {
                         + "</p>"
                         + "</div>";
 
-        emailService.sendMail(email, "Chiikawa Goods Shop - Your New Password", htmlContent);
+        emailService.sendMail(email, "Chiikawa Goods Shop - Reset Your Password", htmlContent);
     }
-
 }

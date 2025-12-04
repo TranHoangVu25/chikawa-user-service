@@ -93,6 +93,12 @@ public class User {
     @Column
     private LocalDate dob;
 
+    @Column(name = "confirm_forgot_token")
+    private String confirmForgot;
+
+    @Column(name = "confirm_forgot_expired")
+    private LocalDateTime confirmForgotExpired;
+
     // Relationship
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 //    @JsonManagedReference

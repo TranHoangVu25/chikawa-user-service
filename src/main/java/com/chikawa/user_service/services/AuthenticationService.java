@@ -2,6 +2,7 @@ package com.chikawa.user_service.services;
 
 import com.chikawa.user_service.dto.ForgotPasswordDTO;
 import com.chikawa.user_service.dto.request.AuthenticationRequest;
+import com.chikawa.user_service.dto.request.ChangePasswordRequest;
 import com.chikawa.user_service.dto.request.IntrospectRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.dto.response.AuthenticationResponse;
@@ -16,6 +17,7 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.StringJoiner;
@@ -41,7 +44,6 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationService {
     UserRepository userRepository;
-    PasswordEncoder passwordEncoder;
     SendEmail sendEmail;
 
     @NonFinal //không bị inject contructor
@@ -197,6 +199,7 @@ public class AuthenticationService {
     }
 
     public ResponseEntity<ApiResponse<String>> forgotPassWord(ForgotPasswordDTO forgotPasswordDTO) {
+        try {
         if(!userRepository.existsByEmail(forgotPasswordDTO.getEmail())) {
             return ResponseEntity.badRequest()
                     .body(
@@ -210,6 +213,7 @@ public class AuthenticationService {
         User user = userRepository.findByEmail(forgotPasswordDTO.getEmail())
                 .orElseThrow(()->new RuntimeException(ErrorCode.USER_NOT_EXISTED.getMessage()));
 
+        //nếu user đăng ký mà chưa xác nhận email thì k dùng chức năng quên password được
         if (user.getConfirmedAt()==null){
             return ResponseEntity.badRequest()
                     .body(
@@ -219,20 +223,108 @@ public class AuthenticationService {
                                     .build()
                     );
         }
-        String new_password = generateRandomPassword.generateRandomPassword(10);
-
-        String password = passwordEncoder.encode(new_password);
-        user.setEncryptedPassword(password);
+        //tạo confirm token
+        String forgot_token = UUID.randomUUID().toString();
+        user.setConfirmForgot(forgot_token);
+        //set expire time
+        user.setConfirmForgotExpired(LocalDateTime.now().plusMinutes(15));
         userRepository.save(user);
 
-        //gọi method gửi email
-        sendEmail.sendEmailForgotPassword(new_password,user.getEmail());
+            //gọi method gửi email
+        sendEmail.sendEmailForgotPassword(forgot_token,user.getEmail());
 
          return ResponseEntity.ok()
                 .body(
                         ApiResponse.<String>builder()
-                                .message("Check inbox to see new password!")
+                                .message("Check inbox to see reset password email!")
                                 .build()
                 );
+        } catch (RuntimeException e) {
+            log.error("Forgot Password Error",e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ResponseEntity<ApiResponse<String>> confirm_password_reset(String forgot_token) {
+        try {
+            if(!userRepository.existsByConfirmForgot(forgot_token)) {
+                return ResponseEntity.badRequest()
+                        .body(
+                                ApiResponse.<String>builder()
+                                        .code(ErrorCode.INVALID_TOKEN.getCode())
+                                        .message(ErrorCode.INVALID_TOKEN.getMessage())
+                                        .build()
+                        );
+            }
+
+            return ResponseEntity.ok(
+                    ApiResponse.<String>builder()
+                            .message("Confirm successfully")
+                            .build()
+            );
+        } catch (RuntimeException e) {
+            log.error("Forgot Password Error",e);
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message(e.getMessage())
+                                    .build()
+                    );
+        }
+    }
+
+    public ResponseEntity<ApiResponse<User>> changePassword(String token, ChangePasswordRequest request){
+        try{
+            User user = userRepository.findByConfirmForgot(token)
+                    .orElseThrow(()->new RuntimeException(ErrorCode.INVALID_TOKEN.getMessage()));
+
+            //nếu user không tồn tại hoặc thời gian xác nhận hết hạn
+            if(!userRepository.existsByConfirmForgot(token)
+                    || user.getConfirmForgotExpired().isBefore(LocalDateTime.now())) {
+                return ResponseEntity.badRequest()
+                        .body(
+                                ApiResponse.<User>builder()
+                                        .code(ErrorCode.INVALID_TOKEN.getCode())
+                                        .message(ErrorCode.INVALID_TOKEN.getMessage())
+                                        .build()
+                        );
+            }
+            PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+            String rawPassword = request.getOldPassword().trim();
+
+            //so sánh mật khẩu mã hóa và mật khẩu trong db
+            boolean authenticated = passwordEncoder.matches(rawPassword, user.getEncryptedPassword());
+
+            log.info("AUTHENTICATE:==="+authenticated);
+
+            //nếu old password khác password trong db
+            if (!authenticated) {
+                return ResponseEntity.badRequest()
+                        .body(
+                                ApiResponse.<User>builder()
+                                        .code(ErrorCode.INCORRECT_PASSWORD.getCode())
+                                        .message(ErrorCode.INCORRECT_PASSWORD.getMessage())
+                                        .build()
+                        );
+            }
+            String new_password = passwordEncoder.encode(request.getNewPassword());
+
+            user.setEncryptedPassword(new_password);
+            User savedUser = userRepository.save(user);
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<User>builder()
+                                    .message("Change password successfully")
+                                    .result(savedUser)
+                                    .build());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<User>builder()
+                                    .message(e.getMessage())
+                                    .build()
+                    );
+        }
     }
 }

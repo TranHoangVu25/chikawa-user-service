@@ -8,6 +8,7 @@ import com.chikawa.user_service.services.AuthenticationService;
 import com.chikawa.user_service.services.LineLoginService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ public class LineLoginController {
     private final LineLoginService lineLoginService;
     private final AuthenticationService authenticationService;
     private final UserRepository userRepository;
+
     @GetMapping("/login")
     public void login(HttpServletResponse response) throws IOException {
         String url = lineLoginService.generateLoginUrl();
@@ -29,8 +31,16 @@ public class LineLoginController {
     }
 
     @PostMapping("/callback")
-    public ResponseEntity<?> callback(@RequestParam("code") String code) throws ParseException {
-//        try {
+    public ResponseEntity<ApiResponse<?>> callback(@RequestParam("code") String code) throws ParseException {
+        try {
+            if (code == null || code.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(
+                                ApiResponse.builder()
+                                        .message("Code is null. Login failed!")
+                                        .build()
+                        );
+            }
             // Lấy thông tin user sau callback LINE
             var userData = lineLoginService.handleCallback(code);
 
@@ -49,21 +59,23 @@ public class LineLoginController {
                     .lineId(lineUserId)
                     .build();
             return ResponseEntity
-                    .status(200) // Redirect
+                    .ok()// Redirect
                     .header("Authorization", "Bearer " + jwt)
                     .header("Access-Control-Expose-Headers", "Authorization") // FE đọc header được
-//                    .header("Location", "http://localhost:5173/")
-                    .body(userLoginResponse)
-                    ;
-
-//        } catch (Exception e) {
-//            return
-//                    ResponseEntity
-//                    .status(302)
-//                    .header("Location", "http://localhost:5173/login?error=line")
-//                    .build();
-
-
-//        }
+                    .body(
+                            ApiResponse.builder()
+                                    .message("Login successfully!")
+                                    .result(userLoginResponse)
+                                    .build()
+                    );
+        } catch (Exception e) {
+            return
+                    ResponseEntity
+                            .badRequest()
+                            .body(
+                                    ApiResponse.builder()
+                                            .message(e.getMessage())
+                                            .build());
+        }
     }
 }

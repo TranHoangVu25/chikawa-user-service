@@ -15,7 +15,7 @@ public enum ErrorCode {
     INVALID_TOKEN(1007,"Token is not valid",HttpStatus.BAD_REQUEST),
     EMAIL_NOT_CONFIRMED(1008,"Email has not confirmed yet",HttpStatus.BAD_REQUEST),
     ACCOUNT_PASSWORD_NOT_CORRECT(1009,"Email or password is incorrect",HttpStatus.BAD_REQUEST),
-
+    INCORRECT_PASSWORD(10010,"Incorrect password",HttpStatus.BAD_REQUEST),
 
     ;
     private int code;

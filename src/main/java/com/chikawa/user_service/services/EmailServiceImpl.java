@@ -25,7 +25,6 @@ public class EmailServiceImpl implements  EmailService {
             helper.setTo(to);
             helper.setSubject(subject);
 
-            // QUAN TRỌNG: Gửi HTML
             helper.setText(htmlContent, true);
 
             mailSender.send(message);

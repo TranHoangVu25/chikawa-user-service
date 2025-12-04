@@ -3,6 +3,7 @@ package com.chikawa.user_service.controllers;
 import com.chikawa.user_service.configuration.CustomJwtDecoder;
 import com.chikawa.user_service.dto.ForgotPasswordDTO;
 import com.chikawa.user_service.dto.request.AuthenticationRequest;
+import com.chikawa.user_service.dto.request.ChangePasswordRequest;
 import com.chikawa.user_service.dto.request.IntrospectRequest;
 import com.chikawa.user_service.dto.request.UserCreationRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
@@ -128,11 +129,41 @@ public class AuthenticationController {
         }
     }
 
-
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(
             @RequestBody @Valid ForgotPasswordDTO forgotPasswordDTO
             ){
-        return authenticationService.forgotPassWord(forgotPasswordDTO);
+            return authenticationService.forgotPassWord(forgotPasswordDTO);
+    }
+
+    @GetMapping("/confirm-forgot")
+    public ResponseEntity<Void> confirmForgotPassword(
+            @RequestParam("token") String token
+    ){
+        log.debug("confirmForgotPassword");
+        String result = authenticationService.confirm_password_reset(token).getBody().getMessage();
+
+        String redirectUrl;
+
+        if (ErrorCode.INVALID_TOKEN.getMessage().equalsIgnoreCase(result)) {
+            log.info("In failed");
+            redirectUrl = "https://your-frontend.com/error?reason=confirm_failed";
+        } else {
+            log.info("Redirect to forgot password success");
+            redirectUrl = "http://localhost:5173/?token="+token;
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(URI.create(redirectUrl));
+
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<User>> changePassword(
+            @RequestParam("token") String token,
+            @RequestBody @Valid ChangePasswordRequest request
+    ){
+        return authenticationService.changePassword(token,request);
     }
 }
