@@ -1,14 +1,14 @@
 package com.chikawa.user_service.services;
 
 import com.chikawa.user_service.dto.ForgotPasswordDTO;
-import com.chikawa.user_service.dto.request.AuthenticationRequest;
-import com.chikawa.user_service.dto.request.ChangePasswordRequest;
-import com.chikawa.user_service.dto.request.IntrospectRequest;
+import com.chikawa.user_service.dto.request.*;
 import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.dto.response.AuthenticationResponse;
 import com.chikawa.user_service.dto.response.IntrospectResponse;
 import com.chikawa.user_service.exception.ErrorCode;
+import com.chikawa.user_service.models.InvalidatedToken;
 import com.chikawa.user_service.models.User;
+import com.chikawa.user_service.repositories.InvalidatedTokenRepository;
 import com.chikawa.user_service.repositories.UserRepository;
 import com.chikawa.user_service.utils.GenerateRandomPassword;
 import com.chikawa.user_service.utils.SendEmail;
@@ -17,7 +17,6 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -45,6 +44,7 @@ import java.util.UUID;
 public class AuthenticationService {
     UserRepository userRepository;
     SendEmail sendEmail;
+    InvalidatedTokenRepository invalidatedTokenRepository;
 
     @NonFinal //không bị inject contructor
     @Value("${jwt.signerKey}") //anotation này được sử dụng để đọc biến trong file .yaml
@@ -114,6 +114,14 @@ public class AuthenticationService {
 
         AuthenticationResponse authenticationResponse = new AuthenticationResponse(token, authenticated);
 
+        if(!authenticationResponse.isAuthenticated()){
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<AuthenticationResponse>builder()
+                                    .message(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage())
+                                    .build()
+                    );
+        }
         return ResponseEntity.ok()
                 .body(
                         ApiResponse.<AuthenticationResponse>builder()
@@ -156,10 +164,10 @@ public class AuthenticationService {
         }
 //
 //        //kiểm tra xem nếu token đã tồn tại trong bảng InvalidatedToken thì trả về lỗi
-//        if(invalidatedTokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID())){
-//            log.info("jwt id was existed in InvalidatedToken table");
-//            throw (new AppException(ErrorCode.UNAUTHENTICATED));
-//        }
+        if (invalidatedTokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID())) {
+            log.info("jwt id was existed in InvalidatedToken table");
+            throw (new Exception(ErrorCode.UNAUTHENTICATED.getMessage()));
+        }
         return signedJWT;
     }
 
@@ -168,7 +176,7 @@ public class AuthenticationService {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
-                .subject(user.getFullName())
+                .subject(user.getEmail())
                 .issuer("THV.com")
                 .issueTime(new Date())
                 .expirationTime(new Date(
@@ -258,6 +266,7 @@ public class AuthenticationService {
         }
     }
 
+    //kiểm tra token trong mail có hợp lệ k
     public ResponseEntity<ApiResponse<String>> confirm_password_reset(String forgot_token) {
         try {
             if(!userRepository.existsByConfirmForgot(forgot_token)) {
@@ -336,6 +345,79 @@ public class AuthenticationService {
                             ApiResponse.<User>builder()
                                     .message(e.getMessage())
                                     .build());
+        }
+    }
+
+    public ResponseEntity<ApiResponse<String>> logOut(LogoutRequest request) throws ParseException, JOSEException {
+        try {
+            var signToken = verifyToken(request.getToken(), true);
+            String jit = signToken.getJWTClaimsSet().getJWTID();
+            Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
+
+            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
+                    .id(jit)
+                    .expiryTime(expiryTime)
+                    .build();
+
+            invalidatedTokenRepository.save(invalidatedToken);
+
+            return ResponseEntity.ok()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message("Logout successfully")
+                                    .build()
+                    );
+        } catch (Exception e) {
+            log.info("Logout failed: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message("Logout failed: " + e.getMessage())
+                                    .build()
+                    );
+        }
+    }
+
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> refreshToken(RefreshRequest request) throws Exception {
+        try {
+            var signedJWT = verifyToken(request.getToken(), true);
+
+            var jit = signedJWT.getJWTClaimsSet().getJWTID();
+            var expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
+                    .id(jit)
+                    .expiryTime(expiryTime)
+                    .build();
+            invalidatedTokenRepository.save(invalidatedToken);
+
+            var email = signedJWT.getJWTClaimsSet().getSubject();
+
+            var user = userRepository.findByEmail(email).orElseThrow(
+                    () -> new RuntimeException(ErrorCode.UNAUTHENTICATED.getMessage())
+            );
+            var token = generateToken(user);
+
+            AuthenticationResponse auth = AuthenticationResponse.builder()
+                    .token(token)
+                    .authenticated(true)
+                    .build();
+
+            return ResponseEntity.ok()
+                    .body(
+                            ApiResponse.<AuthenticationResponse>builder()
+                                    .message("Get token successfully")
+                                    .result(auth)
+                                    .build()
+                    );
+        } catch (Exception e) {
+            log.info("Logout failed: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<AuthenticationResponse>builder()
+                                    .message("Logout failed: " + e.getMessage())
+                                    .build()
+                    );
         }
     }
 }

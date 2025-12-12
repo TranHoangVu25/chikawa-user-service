@@ -27,10 +27,16 @@ public class AddressController {
     @PostMapping() //sau sửa = id trong jwt
     public ResponseEntity<ApiResponse<Address>> createUser(
             @RequestBody @Valid AddressCreateRequest request
-//            @PathVariable Long userId
     ) {
+        try {
         Long userId = UserContextHolder.getUserId();
         return addressService.addAddress(request,userId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.<Address>builder()
+                            .message(e.getMessage())
+                            .build());
+        }
     }
 
     //lấy tất cả các address của user theo id
@@ -39,8 +45,15 @@ public class AddressController {
     public ResponseEntity<ApiResponse<List<Address>>> getAllUser(
 //            @PathVariable Long userId
     ){
+        try {
         Long userId = UserContextHolder.getUserId();
         return addressService.getAllAddressByUserId(userId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.<List<Address>>builder()
+                            .message(e.getMessage())
+                            .build());
+        }
     }
 
     //sửa địa chỉ
@@ -48,11 +61,17 @@ public class AddressController {
     @PutMapping("/{addressId}")
     public ResponseEntity<ApiResponse<Address>> updateUser(
             @RequestBody @Valid AddressUpdateRequest request,
-//            @PathVariable Long userId,
             @PathVariable Long addressId
     ){
+        try {
         Long userId = UserContextHolder.getUserId();
         return addressService.updateAddress(request,addressId,userId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.<Address>builder()
+                            .message(e.getMessage())
+                            .build());
+        }
     }
 
     //xóa địa chỉ
@@ -60,6 +79,13 @@ public class AddressController {
     public ResponseEntity<ApiResponse<?>> deleteUser(
             @PathVariable Long addressId
     ){
+        try {
         return addressService.deleteAddress(addressId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.builder()
+                            .message(e.getMessage())
+                            .build());
+        }
     }
 }

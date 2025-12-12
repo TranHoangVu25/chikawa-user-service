@@ -64,9 +64,7 @@ public class CustomJwtDecoder implements JwtDecoder {
             if (roles != null) {
                 log.info("JWT roles: {}", roles);
             }
-
             return jwt;
-
         } catch (Exception e) {
             throw new JwtException("JWT decode failed: " + e.getMessage(), e);
         }

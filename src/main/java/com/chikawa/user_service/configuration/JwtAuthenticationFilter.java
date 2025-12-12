@@ -1,5 +1,6 @@
 package com.chikawa.user_service.configuration;
 
+import com.chikawa.user_service.repositories.InvalidatedTokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,9 +17,12 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final CustomJwtDecoder customJwtDecoder;
+    private final InvalidatedTokenRepository invalidatedTokenRepository;
 
-    public JwtAuthenticationFilter(CustomJwtDecoder customJwtDecoder) {
+    public JwtAuthenticationFilter(CustomJwtDecoder customJwtDecoder,
+                                   InvalidatedTokenRepository invalidatedTokenRepository) {
         this.customJwtDecoder = customJwtDecoder;
+        this.invalidatedTokenRepository = invalidatedTokenRepository;
     }
 
     @Override
@@ -33,28 +37,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
 
             try {
-                // ✅ Decode JWT bằng CustomJwtDecoder
+                // Decode JWT
                 var jwt = customJwtDecoder.decode(token);
-                String email = jwt.getSubject();              // lấy subject/email
-                String jti = jwt.getClaimAsString("jti");    // lấy jti nếu cần
+                String email = jwt.getSubject();
+                String jti = jwt.getClaimAsString("jti");
 
-                // Create Authentication
+                // ❗ Check token đã bị logout chưa (check theo jti)
+                if (jti != null && invalidatedTokenRepository.existsById(jti)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Token has been logged out or invalid.");
+                    return; // DỪNG filter, không cho đi tiếp
+                }
+
+                // Nếu token hợp lệ và chưa bị logout → set authentication
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-                                email,   // principal
-                                token,   // credentials → lưu JWT
-                                List.of() // authorities nếu cần
+                                email,
+                                token,
+                                List.of() // authorities nếu có
                         );
 
-                // Đưa vào SecurityContextHolder
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
-                // nếu decode thất bại, bỏ qua và để filter tiếp tục
-                logger.warn("Invalid JWT token: {}"+ e.getMessage());
+                logger.warn("Invalid JWT token: " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid token");
+                return;
             }
         }
-
         filterChain.doFilter(request, response);
     }
 }

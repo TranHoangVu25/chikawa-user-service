@@ -2,10 +2,7 @@ package com.chikawa.user_service.controllers;
 
 import com.chikawa.user_service.configuration.CustomJwtDecoder;
 import com.chikawa.user_service.dto.ForgotPasswordDTO;
-import com.chikawa.user_service.dto.request.AuthenticationRequest;
-import com.chikawa.user_service.dto.request.ChangePasswordRequest;
-import com.chikawa.user_service.dto.request.IntrospectRequest;
-import com.chikawa.user_service.dto.request.UserCreationRequest;
+import com.chikawa.user_service.dto.request.*;
 import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.dto.response.AuthenticationResponse;
 import com.chikawa.user_service.dto.response.IntrospectResponse;
@@ -98,11 +95,13 @@ public class AuthenticationController {
 
             //lấy jwt
             String jwt = response.getToken();
+
             Jwt decodedJwt = customJwtDecoder.decode(jwt);
             String scope = decodedJwt.getClaimAsString("scope");
             Long userId = Long.valueOf(decodedJwt.getClaimAsString("userId"));
 
-            User u = userRepository.findById(userId).orElseThrow();
+            User u = userRepository.findById(userId)
+                    .orElseThrow(()-> new Exception(ErrorCode.USER_NOT_EXISTED.getMessage()));
             UserLoginResponse user = new UserLoginResponse().builder()
                     .email(u.getEmail())
                     .id(u.getId())
@@ -118,13 +117,12 @@ public class AuthenticationController {
                                     .result(user)
                                     .build()
                     );
-
         } catch (Exception e) {
             log.error(e.getMessage());
             return ResponseEntity.badRequest()
                     .body(
                             ApiResponse.<UserLoginResponse>builder()
-                                    .message(e.getMessage())
+                                    .message(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage())
                                     .build()
                     );
         }
@@ -166,5 +164,15 @@ public class AuthenticationController {
             @RequestBody @Valid ChangePasswordRequest request
     ){
         return authenticationService.changePassword(token,request);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout (@RequestBody LogoutRequest request) throws ParseException, JOSEException {
+        return authenticationService.logOut(request);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate (@RequestBody RefreshRequest request) throws Exception {
+        return authenticationService.refreshToken(request);
     }
 }

@@ -37,7 +37,6 @@ public class JwtSessionFilter extends OncePerRequestFilter {
                 return;
             }
         }
-
         filterChain.doFilter(request, response);
     }
 }
