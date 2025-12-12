@@ -3,6 +3,7 @@ package com.chikawa.user_service.services;
 import com.chikawa.user_service.dto.request.UserCreationRequest;
 import com.chikawa.user_service.dto.request.UserUpdateRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
+import com.chikawa.user_service.dto.response.UserResponse;
 import com.chikawa.user_service.models.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -24,4 +25,8 @@ public interface UserService {
     ResponseEntity<ApiResponse<User>> createUserAdminRole(UserCreationRequest request);
 
     ResponseEntity<ApiResponse<String>> lockUserAdminRole(Long userId);
+
+    ResponseEntity<ApiResponse<UserResponse>> getUserById(Long userId);
+
+    ResponseEntity<ApiResponse<UserResponse>> getUserProfile(Long userId);
 }

@@ -5,6 +5,7 @@ import com.chikawa.user_service.dto.request.UserCreationRequest;
 import com.chikawa.user_service.dto.request.UserSendEvent;
 import com.chikawa.user_service.dto.request.UserUpdateRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
+import com.chikawa.user_service.dto.response.UserResponse;
 import com.chikawa.user_service.enums.Action;
 import com.chikawa.user_service.exception.ErrorCode;
 import com.chikawa.user_service.models.User;
@@ -23,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -317,8 +319,9 @@ public class UserServiceImpl implements UserService {
             User user = new User().builder()
                     .email(request.getEmail())
                     .fullName(request.getFullName())
+                    .jti(UUID.randomUUID().toString())
                     .encryptedPassword(password)
-                    .confirmationSentAt(LocalDateTime.now())
+                    .confirmedAt(LocalDateTime.now())
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .role(request.getRole())
@@ -364,7 +367,7 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.ok()
                 .body(
                         ApiResponse.<String>builder()
                                 .message("Locked user have id: " + userId)
@@ -381,5 +384,40 @@ public class UserServiceImpl implements UserService {
                                         .build());
             }
         }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<UserResponse>> getUserById(Long userId) {
+        if (!userRepository.existsById(userId)){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.<UserResponse>builder()
+                                    .code(ErrorCode.USER_NOT_EXISTED.getCode())
+                                    .message(ErrorCode.USER_NOT_EXISTED.getMessage())
+                                    .build()
+                    );
+        }
+        User user = userRepository.findById(userId).get();
+        UserResponse userResponse = new UserResponse()
+                .builder()
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .lockedAt(user.getLockedAt())
+                .createdAt(user.getCreatedAt())
+                .lastSignInAt(user.getLastSignInAt())
+                .id(user.getId())
+                .build();
+        return ResponseEntity.ok()
+                .body(
+                        ApiResponse.<UserResponse>builder()
+                                .result(userResponse)
+                                .build()
+                );
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<UserResponse>> getUserProfile(Long userId) {
+        return null;
     }
 }

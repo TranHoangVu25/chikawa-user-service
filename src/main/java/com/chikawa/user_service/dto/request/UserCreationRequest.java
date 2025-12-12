@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -19,7 +20,7 @@ public class UserCreationRequest {
     private String email;
     @NotBlank
     private String fullName;
-    private String jti = "";
+    private String jti;
     @NotBlank
     private String encryptedPassword;
     private String confirmationToken;

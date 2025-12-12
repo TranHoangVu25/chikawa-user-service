@@ -3,6 +3,7 @@ package com.chikawa.user_service.controllers;
 import com.chikawa.user_service.dto.request.UserCreationRequest;
 import com.chikawa.user_service.dto.request.UserUpdateRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
+import com.chikawa.user_service.dto.response.UserResponse;
 import com.chikawa.user_service.models.User;
 import com.chikawa.user_service.services.UserService;
 import jakarta.validation.Valid;
@@ -38,6 +39,7 @@ public class UserController {
         }
     }
 
+    //xem tất cả các user để test
     @GetMapping()
     public ResponseEntity<ApiResponse<List<User>>> getAllUser(){
         return userService.getAllUser();
@@ -70,5 +72,12 @@ public class UserController {
             @RequestBody @Valid UserCreationRequest request
     ) {
         return userService.createUserAdminRole(request);
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<ApiResponse<UserResponse>> getUser(
+            @PathVariable Long userId
+    ){
+        return userService.getUserById(userId);
     }
 }

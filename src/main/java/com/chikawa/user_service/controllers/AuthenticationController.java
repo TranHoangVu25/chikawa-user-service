@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.text.ParseException;
+import java.time.LocalDateTime;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -68,7 +70,7 @@ public class AuthenticationController {
     public ResponseEntity<ApiResponse<String>> confirmAccount(
             @RequestParam("token") String token
     ) {
-        String result = userService.confirmUser(token).getBody().getMessage();
+        String result = Objects.requireNonNull(userService.confirmUser(token).getBody()).getMessage();
 
         String redirectUrl;
 
@@ -87,11 +89,11 @@ public class AuthenticationController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<UserLoginResponse>> login(
             @RequestBody @Valid AuthenticationRequest request
-    ) {
+    ) throws Exception {
         try {
             //tạo token từ request
-            AuthenticationResponse response = authenticationService.authenticate(request)
-                    .getBody().getResult();
+            AuthenticationResponse response = Objects.requireNonNull(authenticationService.authenticate(request)
+                    .getBody()).getResult();
 
             //lấy jwt
             String jwt = response.getToken();
@@ -102,7 +104,14 @@ public class AuthenticationController {
 
             User u = userRepository.findById(userId)
                     .orElseThrow(()-> new Exception(ErrorCode.USER_NOT_EXISTED.getMessage()));
-            UserLoginResponse user = new UserLoginResponse().builder()
+
+            u.setLastSignInAt(u.getCurrentSignInAt());
+            u.setCurrentSignInAt(LocalDateTime.now());
+            u.setSignInCount(u.getSignInCount() + 1);
+            userRepository.save(u);
+
+            new UserLoginResponse();
+            UserLoginResponse user = UserLoginResponse.builder()
                     .email(u.getEmail())
                     .id(u.getId())
                     .fullName(u.getFullName())
@@ -117,9 +126,9 @@ public class AuthenticationController {
                                     .result(user)
                                     .build()
                     );
-        } catch (Exception e) {
+        }catch (Exception e){
             log.error(e.getMessage());
-            return ResponseEntity.badRequest()
+            return ResponseEntity.ok()
                     .body(
                             ApiResponse.<UserLoginResponse>builder()
                                     .message(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage())
@@ -140,16 +149,17 @@ public class AuthenticationController {
             @RequestParam("token") String token
     ){
         log.debug("confirmForgotPassword");
-        String result = authenticationService.confirm_password_reset(token).getBody().getMessage();
+        String result = Objects.requireNonNull(authenticationService.confirm_password_reset(token)
+                        .getBody()).getMessage();
 
         String redirectUrl;
 
         if (ErrorCode.INVALID_TOKEN.getMessage().equalsIgnoreCase(result)) {
             log.info("In failed");
-            redirectUrl = "https://your-frontend.com/error?reason=confirm_failed";
+            redirectUrl = "https://localhost:5173/error?reason=confirm_failed";
         } else {
             log.info("Redirect to forgot password success");
-            redirectUrl = "http://localhost:5173/?token="+token;
+            redirectUrl = "http://localhost:5173/reset-password/?token="+token;
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -168,6 +178,7 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout (@RequestBody LogoutRequest request) throws ParseException, JOSEException {
+
         return authenticationService.logOut(request);
     }
 

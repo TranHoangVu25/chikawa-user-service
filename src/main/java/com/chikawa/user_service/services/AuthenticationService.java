@@ -76,7 +76,8 @@ public class AuthenticationService {
                 .build();
     }
 
-    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(AuthenticationRequest request) throws Exception {
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(AuthenticationRequest request)
+            throws Exception {
         try {
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new Exception(ErrorCode.USER_NOT_EXISTED.getMessage()));
@@ -84,15 +85,14 @@ public class AuthenticationService {
         log.info("User confirmed:"+user.getConfirmedAt());
 
         //nếu tài khoản chưa được confirm hoặc đã bị khóa thì k truy cập được
-        if (user.getConfirmedAt() == null || user.getLockedAt() !=null) {
-            log.error(ErrorCode.EMAIL_NOT_CONFIRMED.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(
-                            ApiResponse.<AuthenticationResponse>builder()
-                                    .message(ErrorCode.EMAIL_NOT_CONFIRMED.getMessage())
-                                    .build()
-                    );
+        if (user.getConfirmedAt() == null) {
+//            log.error("Error not confirm email: "+ErrorCode.EMAIL_NOT_CONFIRMED.getMessage());
+            throw new RuntimeException(new Exception(ErrorCode.EMAIL_NOT_CONFIRMED.getMessage()));
         }
+            if (user.getLockedAt() !=null) {
+//                log.error("Error not confirm email: "+ErrorCode.ACCOUNT_WAS_LOCKED.getMessage());
+                throw new RuntimeException(new Exception(ErrorCode.ACCOUNT_WAS_LOCKED.getMessage()));
+            }
         //mã hóa mật khẩu user nhập
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -115,18 +115,13 @@ public class AuthenticationService {
         AuthenticationResponse authenticationResponse = new AuthenticationResponse(token, authenticated);
 
         if(!authenticationResponse.isAuthenticated()){
-            return ResponseEntity.badRequest()
-                    .body(
-                            ApiResponse.<AuthenticationResponse>builder()
-                                    .message(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage())
-                                    .build()
-                    );
+            throw new RuntimeException(new Exception(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage()));
         }
         return ResponseEntity.ok()
                 .body(
                         ApiResponse.<AuthenticationResponse>builder()
                                 .result(authenticationResponse)
-                                .message("Get token Successful")
+                                .message("Get token successful")
                                 .build()
                 );
 
@@ -312,28 +307,28 @@ public class AuthenticationService {
             }
             PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-            String rawPassword = request.getOldPassword().trim();
+//            String rawPassword = request.getPasswordConfirm().trim();
 
             //so sánh mật khẩu mã hóa và mật khẩu trong db
-            boolean authenticated = passwordEncoder.matches(rawPassword, user.getEncryptedPassword());
-
-            log.info("AUTHENTICATE:==="+authenticated);
-
-            //nếu old password khác password trong db
-            if (!authenticated) {
-                return ResponseEntity.badRequest()
-                        .body(
-                                ApiResponse.<User>builder()
-                                        .code(ErrorCode.INCORRECT_PASSWORD.getCode())
-                                        .message(ErrorCode.INCORRECT_PASSWORD.getMessage())
-                                        .build()
-                        );
-            }
+//            boolean authenticated = passwordEncoder.matches(rawPassword, user.getEncryptedPassword());
+//
+//            log.info("AUTHENTICATE:==="+authenticated);
+//
+//            //nếu old password khác password trong db
+//            if (!authenticated) {
+//                return ResponseEntity.badRequest()
+//                        .body(
+//                                ApiResponse.<User>builder()
+//                                        .code(ErrorCode.INCORRECT_PASSWORD.getCode())
+//                                        .message(ErrorCode.INCORRECT_PASSWORD.getMessage())
+//                                        .build()
+//                        );
+//            }
             String new_password = passwordEncoder.encode(request.getNewPassword());
 
             user.setEncryptedPassword(new_password);
             User savedUser = userRepository.save(user);
-            return ResponseEntity.badRequest()
+            return ResponseEntity.ok()
                     .body(
                             ApiResponse.<User>builder()
                                     .message("Change password successfully")
