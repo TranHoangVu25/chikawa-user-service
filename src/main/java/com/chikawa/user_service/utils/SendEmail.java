@@ -15,8 +15,8 @@ public class SendEmail {
     EmailService emailService;
 
     public void sendEmailRegister(String confirmToken, String email) {
-        String link = "http://localhost:8085/api/v1/auth/confirm?token=" + confirmToken;
-//        String link = "https://fearsome-ollie-correspondently.ngrok-free.dev/api/v1/auth/confirm?token=" + confirmToken;
+//        String link = "http://localhost:8085/api/v1/auth/confirm?token=" + confirmToken;
+        String link = "https://fearsome-ollie-correspondently.ngrok-free.dev/api/v1/auth/confirm?token=" + confirmToken;
         String htmlContent =
                 "<div style='font-family:Arial, sans-serif; line-height:1.6; padding:20px; color:#333;'>"
                         + "<h2 style='color:#ff6f61;'>Chiikawa Goods Shop</h2>"
@@ -46,7 +46,8 @@ public class SendEmail {
 
     public void sendEmailForgotPassword(String confirmToken, String email) {
 
-        String link = "http://localhost:8085/api/v1/auth/confirm-forgot?token=" + confirmToken;
+//        String link = "http://localhost:8085/api/v1/auth/confirm-forgot?token=" + confirmToken;
+        String link = "https://fearsome-ollie-correspondently.ngrok-free.dev/api/v1/auth/confirm-forgot?token=" + confirmToken;
 
         String htmlContent =
                 "<div style='font-family:Arial, sans-serif; line-height:1.6; padding:20px; color:#333;'>"

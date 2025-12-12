@@ -22,10 +22,20 @@ public class UserController {
     UserService userService;
 
     @PostMapping()
-    public ResponseEntity<ApiResponse<String>> createUser(
+    public ResponseEntity<ApiResponse<String>> registerAccount(
             @RequestBody @Valid UserCreationRequest request
     ) {
-        return userService.createUser(request);
+        try {
+
+            return userService.registerAccount(request);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message(e.getMessage())
+                                    .build()
+                    );
+        }
     }
 
     @GetMapping()
@@ -46,5 +56,19 @@ public class UserController {
             @PathVariable Long userId
     ){
         return userService.deleteUser(userId);
+    }
+
+    @PostMapping("/lock/{userId}")
+    public ResponseEntity<ApiResponse<String>> lockUser(
+            @PathVariable Long userId
+    ) {
+        return userService.lockUserAdminRole(userId);
+    }
+
+    @PostMapping("/create-user")
+    public ResponseEntity<ApiResponse<User>> createAccount(
+            @RequestBody @Valid UserCreationRequest request
+    ) {
+        return userService.createUserAdminRole(request);
     }
 }

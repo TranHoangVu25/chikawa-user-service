@@ -38,6 +38,7 @@ public class LineLoginController {
                         .body(
                                 ApiResponse.builder()
                                         .message("Code is null. Login failed!")
+                                        .result(true)
                                         .build()
                         );
             }

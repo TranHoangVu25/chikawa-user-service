@@ -13,7 +13,7 @@ import java.util.List;
 public interface UserService {
     ResponseEntity<ApiResponse<List<User>>> getAllUser ();
 
-    ResponseEntity<ApiResponse<String>> createUser (UserCreationRequest request);
+    ResponseEntity<ApiResponse<String>> registerAccount(UserCreationRequest request);
 
     ResponseEntity<ApiResponse<User>> updateUser(UserUpdateRequest request, Long id);
 
@@ -21,4 +21,7 @@ public interface UserService {
 
     ResponseEntity<ApiResponse<String>> confirmUser(String token);
 
+    ResponseEntity<ApiResponse<User>> createUserAdminRole(UserCreationRequest request);
+
+    ResponseEntity<ApiResponse<String>> lockUserAdminRole(Long userId);
 }

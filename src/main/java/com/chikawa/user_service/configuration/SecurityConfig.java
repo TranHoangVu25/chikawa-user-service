@@ -15,8 +15,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -29,7 +27,8 @@ public class SecurityConfig {
             "/api/v1/**",
             "/register",
             "/forgot-password",
-            "/auth/**"
+            "/auth/**",
+            "api"
     };
 
     @Autowired
@@ -78,24 +77,24 @@ public class SecurityConfig {
     }
 
     // ---------------- CORS CHUẨN NHẤT ------------------
-    @Bean
-    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
-
-        CorsConfiguration config = new CorsConfiguration();
-
-        // FE đang chạy ở localhost:5173
-        config.addAllowedOriginPattern("*");
-        // Nếu FE cố định:
-        // config.addAllowedOriginPattern("http://localhost:5173");
-
-        config.setAllowCredentials(true);
-        config.addAllowedMethod("*");
-        config.addAllowedHeader("*");
-        config.addExposedHeader("Authorization");
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-
-        return source;
-    }
+//    @Bean
+//    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
+//
+//        CorsConfiguration config = new CorsConfiguration();
+//
+//        // FE đang chạy ở localhost:5173
+//        config.addAllowedOriginPattern("*");
+//        // Nếu FE cố định:
+//        // config.addAllowedOriginPattern("http://localhost:5173");
+//
+//        config.setAllowCredentials(true);
+//        config.addAllowedMethod("*");
+//        config.addAllowedHeader("*");
+//        config.addExposedHeader("Authorization");
+//
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        source.registerCorsConfiguration("/**", config);
+//
+//        return source;
+//    }
 }

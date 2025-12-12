@@ -1,5 +1,6 @@
-package com.chikawa.user_service.services;
+package com.chikawa.user_service.services.Impl;
 
+import com.chikawa.user_service.services.EmailService;
 import jakarta.mail.internet.MimeMessage;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
-public class EmailServiceImpl implements  EmailService {
+public class EmailServiceImpl implements EmailService {
     JavaMailSender mailSender;
 
     public void sendMail(String to, String subject, String htmlContent) {

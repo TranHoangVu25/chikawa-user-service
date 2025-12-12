@@ -9,6 +9,7 @@ import com.chikawa.user_service.dto.request.UserCreationRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.dto.response.AuthenticationResponse;
 import com.chikawa.user_service.dto.response.IntrospectResponse;
+import com.chikawa.user_service.dto.response.UserLoginResponse;
 import com.chikawa.user_service.exception.ErrorCode;
 import com.chikawa.user_service.models.User;
 import com.chikawa.user_service.repositories.UserRepository;
@@ -22,7 +23,6 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -62,7 +62,7 @@ public class AuthenticationController {
     public ResponseEntity<ApiResponse<String>> register(
             @RequestBody UserCreationRequest request
     ) {
-        return userService.createUser(request);
+        return userService.registerAccount(request);
     }
 
     //khách hàng ấn vào confirm trong email sẽ được chuyển đến api này
@@ -88,31 +88,33 @@ public class AuthenticationController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<User>> login(
+    public ResponseEntity<ApiResponse<UserLoginResponse>> login(
             @RequestBody @Valid AuthenticationRequest request
     ) {
         try {
+            //tạo token từ request
             AuthenticationResponse response = authenticationService.authenticate(request)
                     .getBody().getResult();
 
+            //lấy jwt
             String jwt = response.getToken();
             Jwt decodedJwt = customJwtDecoder.decode(jwt);
             String scope = decodedJwt.getClaimAsString("scope");
             Long userId = Long.valueOf(decodedJwt.getClaimAsString("userId"));
 
             User u = userRepository.findById(userId).orElseThrow();
-            User user = new User().builder()
+            UserLoginResponse user = new UserLoginResponse().builder()
                     .email(u.getEmail())
                     .id(u.getId())
                     .fullName(u.getFullName())
-                    .lineUserId(u.getLineUserId())
+                    .lineId(u.getLineUserId())
                     .build();
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt)
                     .body(
-                            ApiResponse.<User>builder()
-                                    .message("Login with role: " + scope)
+                            ApiResponse.<UserLoginResponse>builder()
+                                    .message("Login successfully by: " + user.getFullName())
                                     .result(user)
                                     .build()
                     );
@@ -121,9 +123,8 @@ public class AuthenticationController {
             log.error(e.getMessage());
             return ResponseEntity.badRequest()
                     .body(
-                            ApiResponse.<User>builder()
-                                    .code(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getCode())
-                                    .message(ErrorCode.ACCOUNT_PASSWORD_NOT_CORRECT.getMessage())
+                            ApiResponse.<UserLoginResponse>builder()
+                                    .message(e.getMessage())
                                     .build()
                     );
         }

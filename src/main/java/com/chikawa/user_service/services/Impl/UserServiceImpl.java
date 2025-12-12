@@ -1,4 +1,4 @@
-package com.chikawa.user_service.services;
+package com.chikawa.user_service.services.Impl;
 
 import com.chikawa.user_service.configuration.RabbitMQConfig;
 import com.chikawa.user_service.dto.request.UserCreationRequest;
@@ -9,13 +9,13 @@ import com.chikawa.user_service.enums.Action;
 import com.chikawa.user_service.exception.ErrorCode;
 import com.chikawa.user_service.models.User;
 import com.chikawa.user_service.repositories.UserRepository;
+import com.chikawa.user_service.services.UserService;
 import com.chikawa.user_service.utils.SendEmail;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +38,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<ApiResponse<List<User>>> getAllUser() {
+        try {
         List<User> users = userRepository.findAll();
         if (users.isEmpty()) {
             return ResponseEntity.ok()
@@ -50,13 +51,23 @@ public class UserServiceImpl implements UserService {
         return ResponseEntity.ok()
                 .body(
                         ApiResponse.<List<User>>builder()
+                                .message("Successfully retrieved users")
                                 .result(users)
                                 .build()
                 );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<List<User>>builder()
+                                    .message("Have error: " + e.getMessage())
+                                    .build());
+        }
     }
 
+    //service đăng ký user
     @Override
-    public ResponseEntity<ApiResponse<String>> createUser(UserCreationRequest request) {
+    public ResponseEntity<ApiResponse<String>> registerAccount(UserCreationRequest request) {
+        try {
         //kiểm tra user đã tồn tại ch = email
         if (userRepository.existsByEmail(request.getEmail())){
             User user_existing = userRepository.findByEmail(request.getEmail())
@@ -118,10 +129,18 @@ public class UserServiceImpl implements UserService {
                         .message("Verification email sent. Please check your inbox.")
                         .build()
         );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message("Register have error: " + e.getMessage())
+                                    .build());
+        }
     }
 
     @Override
     public ResponseEntity<ApiResponse<User>> updateUser(UserUpdateRequest request, Long userId) {
+        try {
         //Trường hợp userId không tồn tại
         if (!userRepository.existsById(userId)){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -169,11 +188,19 @@ public class UserServiceImpl implements UserService {
                                 .result(saved_user)
                                 .build()
                 );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<User>builder()
+                                    .message("Update have error: " + e.getMessage())
+                                    .build());
+        }
     }
 
     //xóa user và gửi event qua promotion
     @Override
     public ResponseEntity<ApiResponse<?>> deleteUser(Long userId) {
+        try {
         if (!userRepository.existsById(userId)){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(
@@ -203,13 +230,20 @@ public class UserServiceImpl implements UserService {
                                 .message("Delete user successfully")
                                 .build()
                 );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message("Delete user have error: " + e.getMessage())
+                                    .build());
+        }
     }
 
     //hàm xác nhận user khi chọn xác nhận trong mail
     @Override
     @Transactional
     public ResponseEntity<ApiResponse<String>> confirmUser(String token) {
-
+        try {
         User user = userRepository.findByConfirmationToken(token)
                 .orElse(null);
 
@@ -252,8 +286,100 @@ public class UserServiceImpl implements UserService {
         );
         return ResponseEntity.ok(
                 ApiResponse.<String>builder()
-                        .message("Successfully")
+                        .message("Confirm successfully!")
                         .build()
         );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message("Cofirm email have error: " + e.getMessage())
+                                    .build());
+        }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<User>> createUserAdminRole(UserCreationRequest request) {
+        try {
+            //kiểm tra user đã tồn tại ch = email
+            if (userRepository.existsByEmail(request.getEmail())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(
+                                ApiResponse.<User>builder()
+                                        .code(ErrorCode.USER_EXISTED.getCode())
+                                        .message(ErrorCode.USER_EXISTED.getMessage())
+                                        .build()
+                        );
+            }
+            //mã hóa mật khẩu
+            String password = passwordEncoder.encode(request.getEncryptedPassword());
+
+            User user = new User().builder()
+                    .email(request.getEmail())
+                    .fullName(request.getFullName())
+                    .encryptedPassword(password)
+                    .confirmationSentAt(LocalDateTime.now())
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .role(request.getRole())
+                    .signInCount(0)
+                    .dob(request.getDob())
+                    .build();
+
+            User savedUser = userRepository.save(user);
+
+            return ResponseEntity.ok(
+                    ApiResponse.<User>builder()
+                            .message("Create user successfully.")
+                            .result(savedUser)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.<User>builder()
+                                    .message("Create user have error "+e.getMessage())
+                                    .build()
+                    );
+        }
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<String>> lockUserAdminRole(Long userId) {
+        try {
+        //Trường hợp userId không tồn tại
+        if (!userRepository.existsById(userId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .code(ErrorCode.USER_NOT_EXISTED.getCode())
+                                    .message(ErrorCode.USER_NOT_EXISTED.getMessage())
+                                    .build()
+                    );
+        }
+        User user = userRepository.findById(userId).get();
+
+        user.setLockedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(
+                        ApiResponse.<String>builder()
+                                .message("Locked user have id: " + userId)
+                                .build()
+                );
+        }
+        catch (Exception e) {
+            log.error(e.getMessage());
+            {
+                return ResponseEntity.badRequest()
+                        .body(
+                                ApiResponse.<String>builder()
+                                        .message("Lock user have error: " + e.getMessage())
+                                        .build());
+            }
+        }
     }
 }

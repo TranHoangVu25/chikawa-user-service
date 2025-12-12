@@ -77,10 +77,14 @@ public class AuthenticationService {
     }
 
     public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(AuthenticationRequest request) throws Exception {
+        try {
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new Exception(ErrorCode.USER_NOT_EXISTED.getMessage()));
 
-        if (user.getConfirmedAt() == null) {
+        log.info("User confirmed:"+user.getConfirmedAt());
+
+        //nếu tài khoản chưa được confirm hoặc đã bị khóa thì k truy cập được
+        if (user.getConfirmedAt() == null || user.getLockedAt() !=null) {
             log.error(ErrorCode.EMAIL_NOT_CONFIRMED.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(
@@ -112,12 +116,21 @@ public class AuthenticationService {
 
         return ResponseEntity.ok()
                 .body(
-
                         ApiResponse.<AuthenticationResponse>builder()
                                 .result(authenticationResponse)
                                 .message("Get token Successful")
                                 .build()
                 );
+
+        }catch (Exception e){
+            log.error("Authentication Exception"+e.getMessage());
+            return ResponseEntity.ok()
+                    .body(
+                            ApiResponse.<AuthenticationResponse>builder()
+                                    .message("Authentication Exception"+e.getMessage())
+                                    .build()
+                    );
+        }
     }
 
     private SignedJWT verifyToken(String token, boolean isRefresh) throws Exception {
@@ -256,7 +269,6 @@ public class AuthenticationService {
                                         .build()
                         );
             }
-
             return ResponseEntity.ok(
                     ApiResponse.<String>builder()
                             .message("Confirm successfully")
@@ -323,8 +335,7 @@ public class AuthenticationService {
                     .body(
                             ApiResponse.<User>builder()
                                     .message(e.getMessage())
-                                    .build()
-                    );
+                                    .build());
         }
     }
 }

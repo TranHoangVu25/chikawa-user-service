@@ -1,4 +1,4 @@
-package com.chikawa.user_service.services;
+package com.chikawa.user_service.services.Impl;
 
 import com.chikawa.user_service.dto.request.AddressCreateRequest;
 import com.chikawa.user_service.dto.request.AddressUpdateRequest;
@@ -8,6 +8,7 @@ import com.chikawa.user_service.models.Address;
 import com.chikawa.user_service.models.User;
 import com.chikawa.user_service.repositories.AddressRepository;
 import com.chikawa.user_service.repositories.UserRepository;
+import com.chikawa.user_service.services.AddressService;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
