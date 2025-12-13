@@ -1,11 +1,14 @@
 package com.chikawa.user_service.controllers;
 
+import com.chikawa.user_service.dto.request.ChangePasswordRequest;
 import com.chikawa.user_service.dto.request.UserCreationRequest;
 import com.chikawa.user_service.dto.request.UserUpdateRequest;
 import com.chikawa.user_service.dto.response.ApiResponse;
 import com.chikawa.user_service.dto.response.UserResponse;
 import com.chikawa.user_service.models.User;
+import com.chikawa.user_service.services.AuthenticationService;
 import com.chikawa.user_service.services.UserService;
+import com.chikawa.user_service.utils.UserContextHolder;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -21,22 +24,13 @@ import java.util.List;
 @RequestMapping("api/v1/users")
 public class UserController {
     UserService userService;
+    AuthenticationService authenticationService;
 
     @PostMapping()
     public ResponseEntity<ApiResponse<String>> registerAccount(
             @RequestBody @Valid UserCreationRequest request
     ) {
-        try {
-
             return userService.registerAccount(request);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(
-                            ApiResponse.<String>builder()
-                                    .message(e.getMessage())
-                                    .build()
-                    );
-        }
     }
 
     //xem tất cả các user để test
@@ -79,5 +73,20 @@ public class UserController {
             @PathVariable Long userId
     ){
         return userService.getUserById(userId);
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<UserResponse>> getProfile(
+    ){
+        Long userId = UserContextHolder.getUserId();
+        return userService.getUserById(userId);
+    }
+
+    @PostMapping("change-password")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @RequestBody @Valid ChangePasswordRequest request
+    ){
+        Long userId = UserContextHolder .getUserId();
+        return authenticationService.changePassword(userId,request);
     }
 }

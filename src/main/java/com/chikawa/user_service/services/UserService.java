@@ -29,4 +29,6 @@ public interface UserService {
     ResponseEntity<ApiResponse<UserResponse>> getUserById(Long userId);
 
     ResponseEntity<ApiResponse<UserResponse>> getUserProfile(Long userId);
+
+    ResponseEntity<ApiResponse<List<User>>> findByRole(String role);
 }

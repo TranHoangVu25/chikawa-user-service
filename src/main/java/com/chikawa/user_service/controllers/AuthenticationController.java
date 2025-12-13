@@ -173,7 +173,7 @@ public class AuthenticationController {
             @RequestParam("token") String token,
             @RequestBody @Valid ChangePasswordRequest request
     ){
-        return authenticationService.changePassword(token,request);
+        return authenticationService.changePasswordFormForgot(token,request);
     }
 
     @PostMapping("/logout")

@@ -15,6 +15,7 @@ public class UserResponse {
     String email;
     String fullName;
     String role;
+    String lineUserId;
     LocalDateTime lockedAt;
     LocalDateTime createdAt;
     LocalDateTime lastSignInAt;

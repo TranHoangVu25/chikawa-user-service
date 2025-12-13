@@ -289,7 +289,8 @@ public class AuthenticationService {
         }
     }
 
-    public ResponseEntity<ApiResponse<User>> changePassword(String token, ChangePasswordRequest request){
+    // đổi mật khẩu khi quên mật khẩu
+    public ResponseEntity<ApiResponse<User>> changePasswordFormForgot(String token, ChangePasswordRequest request){
         try{
             User user = userRepository.findByConfirmForgot(token)
                     .orElseThrow(()->new RuntimeException(ErrorCode.INVALID_TOKEN.getMessage()));
@@ -339,6 +340,57 @@ public class AuthenticationService {
                     .body(
                             ApiResponse.<User>builder()
                                     .message(e.getMessage())
+                                    .build());
+        }
+    }
+
+    //đổi mk trong user setting
+    public ResponseEntity<ApiResponse<String>> changePassword(Long userId, ChangePasswordRequest request){
+        try{
+            //nếu user không tồn tại hoặc thời gian xác nhận hết hạn
+            if(!userRepository.existsById(userId)) {
+                return ResponseEntity.badRequest()
+                        .body(
+                                ApiResponse.<String>builder()
+                                        .code(ErrorCode.USER_NOT_EXISTED.getCode())
+                                        .message(ErrorCode.USER_NOT_EXISTED.getMessage())
+                                        .build()
+                        );
+            }
+            User user = userRepository.findById(userId).orElse(null);
+            PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+            String rawPassword = request.getOldPassword().trim();
+
+            //so sánh mật khẩu mã hóa và mật khẩu trong db
+            boolean authenticated = passwordEncoder.matches(rawPassword, user.getEncryptedPassword());
+
+            log.info("AUTHENTICATE:==="+authenticated);
+
+            //nếu old password khác password trong db
+            if (!authenticated) {
+                return ResponseEntity.badRequest()
+                        .body(
+                                ApiResponse.<String>builder()
+                                        .code(ErrorCode.INCORRECT_PASSWORD.getCode())
+                                        .message(ErrorCode.INCORRECT_PASSWORD.getMessage())
+                                        .build()
+                        );
+            }
+            String new_password = passwordEncoder.encode(request.getNewPassword());
+
+            user.setEncryptedPassword(new_password);
+            userRepository.save(user);
+            return ResponseEntity.ok()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message("Change password successfully")
+                                    .build());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(
+                            ApiResponse.<String>builder()
+                                    .message("Have error"+e.getMessage())
                                     .build());
         }
     }

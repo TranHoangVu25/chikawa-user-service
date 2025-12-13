@@ -386,6 +386,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    //lấy thoong tin user trong dashboard
     @Override
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(Long userId) {
         if (!userRepository.existsById(userId)){
@@ -416,8 +417,46 @@ public class UserServiceImpl implements UserService {
                 );
     }
 
+    // lấy profile user trong màn user
     @Override
     public ResponseEntity<ApiResponse<UserResponse>> getUserProfile(Long userId) {
-        return null;
+        if (!userRepository.existsById(userId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.<UserResponse>builder()
+                                    .code(ErrorCode.USER_NOT_EXISTED.getCode())
+                                    .message(ErrorCode.USER_NOT_EXISTED.getMessage())
+                                    .build()
+                    );
+        }
+        User user = userRepository.findById(userId).get();
+
+        UserResponse userResponse = new UserResponse().builder()
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .lineUserId(user.getLineUserId())
+                .build();
+
+        return ResponseEntity.ok()
+                .body(
+                        ApiResponse.<UserResponse>builder()
+                                .message("Get profile user has id: " + userId)
+                                .result(userResponse)
+                                .build()
+                );
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<List<User>>> findByRole(String role) {
+        List<User> users = userRepository.findByRole(role);
+        if (users.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok()
+                .body(
+                        ApiResponse.<List<User>>builder()
+                                .result(users)
+                                .build()
+                );
     }
 }
